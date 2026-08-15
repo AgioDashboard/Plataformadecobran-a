@@ -24,7 +24,7 @@ sistema de arquivos: o navegador bloqueia módulos ES em `file://`.
 Testes:
 
 ```bash
-node --test testes/
+node --test "testes/*.test.js"
 ```
 
 Não há dependências para instalar.

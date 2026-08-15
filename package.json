@@ -6,6 +6,6 @@
   "description": "Painel de cobranca — Fase 1 (dados ficticios, sem integracao)",
   "scripts": {
     "servir": "node servidor-local.js",
-    "teste": "node --test testes/"
+    "teste": "node --test \"testes/*.test.js\""
   }
 }
