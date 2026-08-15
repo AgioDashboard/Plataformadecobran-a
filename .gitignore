@@ -8,6 +8,10 @@
 credenciais.json
 segredos.json
 
+# Ferramental local de agentes. Nao faz parte do site publicado no Pages.
+.claude/
+.agents/
+
 # Dependencias e build (Fase 2)
 node_modules/
 dist/

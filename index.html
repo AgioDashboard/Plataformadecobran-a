@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Painel de Cobrança</title>
+    <link rel="stylesheet" href="estilos.css" />
+  </head>
+  <body>
+    <div id="painel" class="painel">
+      <header class="cabecalho">
+        <div>
+          <h1>Painel de Cobrança</h1>
+          <p class="subtitulo">Fase 1 — dados fictícios, nenhum disparo ativo</p>
+        </div>
+        <button
+          id="botao-pausa"
+          type="button"
+          class="botao-pausa"
+          aria-pressed="false"
+        >
+          Pausar disparos
+        </button>
+      </header>
+
+      <div id="faixa-pausa" class="faixa-pausa" role="status" aria-live="assertive" hidden>
+        Disparos pausados. Nenhuma mensagem será enviada até você retomar.
+      </div>
+
+      <section class="totais" aria-label="Resumo">
+        <article class="cartao">
+          <h2>Total inadimplente</h2>
+          <p id="total-divida" class="cartao-valor">—</p>
+        </article>
+        <article class="cartao">
+          <h2>Clientes</h2>
+          <p id="total-clientes" class="cartao-valor">—</p>
+        </article>
+        <article class="cartao">
+          <h2>Mensagens hoje</h2>
+          <p id="total-enviadas" class="cartao-valor">—</p>
+        </article>
+      </section>
+
+      <section class="bloco" aria-labelledby="titulo-clientes">
+        <h2 id="titulo-clientes">Clientes inadimplentes</h2>
+        <table id="tabela-clientes" class="tabela">
+          <caption class="oculto-visualmente">
+            Clientes com valores em aberto, com valor, vencimento e situação
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Cliente</th>
+              <th scope="col">Telefone</th>
+              <th scope="col" class="numerico">Valor</th>
+              <th scope="col">Vencimento</th>
+              <th scope="col">Atraso</th>
+              <th scope="col">Situação</th>
+            </tr>
+          </thead>
+          <tbody id="corpo-clientes"></tbody>
+        </table>
+        <p id="vazio-clientes" class="vazio" hidden>Nenhum cliente inadimplente.</p>
+      </section>
+
+      <section class="bloco" aria-labelledby="titulo-historico">
+        <h2 id="titulo-historico">Histórico de mensagens</h2>
+        <ul id="lista-historico" class="historico"></ul>
+        <p id="vazio-historico" class="vazio" hidden>Nenhuma mensagem enviada ainda.</p>
+      </section>
+    </div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

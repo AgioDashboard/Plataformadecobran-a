@@ -1,0 +1,11 @@
+{
+  "name": "plataforma-cobranca",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Painel de cobranca — Fase 1 (dados ficticios, sem integracao)",
+  "scripts": {
+    "servir": "node servidor-local.js",
+    "teste": "node --test \"testes/*.test.js\""
+  }
+}
