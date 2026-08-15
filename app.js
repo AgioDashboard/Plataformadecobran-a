@@ -9,6 +9,7 @@ import {
   mascararTelefone,
   calcularTotais,
 } from './logica.js';
+import { lerPausa, alternarPausa, lerEventosPausa } from './estado-pausa.js';
 
 const ROTULOS_STATUS = {
   aguardando: 'Aguardando',
@@ -17,6 +18,24 @@ const ROTULOS_STATUS = {
 };
 
 const elemento = (id) => document.getElementById(id);
+
+// Em modo restrito o proprio acesso a window.localStorage lanca. O dublê
+// devolvido mantem o painel funcional, apenas sem persistencia.
+function obterArmazenamento() {
+  try {
+    const teste = '__cobranca_teste__';
+    window.localStorage.setItem(teste, '1');
+    window.localStorage.removeItem(teste);
+    return window.localStorage;
+  } catch {
+    return {
+      getItem: () => null,
+      setItem: () => {},
+    };
+  }
+}
+
+const armazenamento = obterArmazenamento();
 
 const formatadorData = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' });
 const formatadorDataHora = new Intl.DateTimeFormat('pt-BR', {
@@ -99,10 +118,52 @@ function itemDeMensagem(entrada) {
   return item;
 }
 
+function itemDeEvento(evento) {
+  const item = document.createElement('li');
+  item.className = 'historico-sistema';
+
+  const topo = document.createElement('div');
+  topo.className = 'historico-topo';
+
+  const nome = document.createElement('span');
+  nome.className = 'historico-nome';
+  nome.textContent = evento.pausado
+    ? 'Sistema — disparos pausados'
+    : 'Sistema — disparos retomados';
+
+  const quando = document.createElement('span');
+  quando.className = 'historico-quando';
+  quando.textContent = formatadorDataHora.format(new Date(evento.quando));
+
+  topo.append(nome, quando);
+  item.append(topo);
+  return item;
+}
+
 function renderizarHistorico() {
-  const ordenado = [...historico].sort((a, b) => new Date(b.quando) - new Date(a.quando));
-  elemento('lista-historico').replaceChildren(...ordenado.map(itemDeMensagem));
-  elemento('vazio-historico').hidden = ordenado.length > 0;
+  const mensagens = historico.map((entrada) => ({
+    quando: entrada.quando,
+    elemento: () => itemDeMensagem(entrada),
+  }));
+  const eventos = lerEventosPausa(armazenamento).map((evento) => ({
+    quando: evento.quando,
+    elemento: () => itemDeEvento(evento),
+  }));
+
+  const tudo = [...mensagens, ...eventos].sort(
+    (a, b) => new Date(b.quando) - new Date(a.quando),
+  );
+
+  elemento('lista-historico').replaceChildren(...tudo.map((linha) => linha.elemento()));
+  elemento('vazio-historico').hidden = tudo.length > 0;
+}
+
+function aplicarPausa(estado) {
+  const botao = elemento('botao-pausa');
+  botao.setAttribute('aria-pressed', String(estado.pausado));
+  botao.textContent = estado.pausado ? 'Retomar disparos' : 'Pausar disparos';
+  elemento('faixa-pausa').hidden = !estado.pausado;
+  elemento('painel').classList.toggle('painel-pausado', estado.pausado);
 }
 
 function renderizar() {
@@ -112,4 +173,10 @@ function renderizar() {
   renderizarHistorico();
 }
 
+elemento('botao-pausa').addEventListener('click', () => {
+  aplicarPausa(alternarPausa(armazenamento, new Date()));
+  renderizarHistorico();
+});
+
+aplicarPausa(lerPausa(armazenamento));
 renderizar();
