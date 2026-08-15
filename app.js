@@ -160,7 +160,8 @@ function linhaDeCliente(cliente, hoje) {
   const silenciar = document.createElement('button');
   silenciar.type = 'button';
   silenciar.className = silenciado ? 'botao-linha botao-linha-ativo' : 'botao-linha';
-  silenciar.textContent = silenciado ? 'Reativar' : 'Não perturbe';
+  // Verbo curto no botao; o estado em si aparece na etiqueta da linha.
+  silenciar.textContent = silenciado ? 'Reativar' : 'Silenciar';
   silenciar.setAttribute(
     'aria-label',
     silenciado

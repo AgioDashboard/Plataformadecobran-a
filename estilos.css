@@ -52,6 +52,13 @@
   box-sizing: border-box;
 }
 
+/* Qualquer regra de display com classe vence o display:none que o atributo
+   hidden aplica pela folha do navegador. Sem isto, .gaveta { display: flex }
+   deixa a gaveta visivel mesmo com hidden. */
+[hidden] {
+  display: none !important;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -70,13 +77,13 @@ body {
 /* A moldura reproduz o "aplicativo flutuante" da referencia: um bloco
    arredondado com degrade proprio, apoiado sobre o fundo neutro. */
 .moldura {
-  max-width: 1240px;
+  max-width: 1460px;
   margin: 0 auto;
-  padding: 26px 30px 34px;
+  padding: 26px 32px 36px;
   border-radius: var(--raio-moldura);
   background:
-    radial-gradient(120% 90% at 100% 0%, var(--azul-100) 0%, transparent 58%),
-    linear-gradient(180deg, #ffffff 0%, var(--azul-050) 100%);
+    radial-gradient(88% 74% at 102% -10%, #9dbcff 0%, rgba(157, 188, 255, 0.55) 30%, rgba(214, 227, 255, 0.3) 55%, transparent 74%),
+    linear-gradient(165deg, #ffffff 0%, #f2f6ff 42%, #e6eeff 100%);
   box-shadow: var(--sombra-moldura);
 }
 
@@ -234,9 +241,23 @@ body {
 }
 
 .numero-rotulo {
-  margin-top: 2px;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 3px;
   color: var(--texto-medio);
   font-size: 0.83rem;
+}
+
+.numero-icone {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  fill: none;
+  stroke: var(--texto-fraco);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* ---------- Barras de composicao ---------- */
@@ -301,14 +322,14 @@ body {
 
 .grade {
   display: grid;
-  grid-template-columns: minmax(0, 1.85fr) minmax(280px, 1fr);
+  grid-template-columns: minmax(0, 2.45fr) minmax(300px, 1fr);
   gap: var(--gap);
   margin-top: 26px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .cartao {
-  padding: 22px 24px;
+  padding: 26px 28px;
   border-radius: var(--raio-cartao);
   background: var(--superficie);
   box-shadow: var(--sombra-cartao), inset 0 0 0 1px var(--borda);
@@ -425,7 +446,7 @@ body {
 }
 
 .tabela th {
-  padding: 0 14px 10px;
+  padding: 0 10px 10px;
   border-bottom: 1px solid var(--borda);
   color: var(--texto-fraco);
   font-size: 0.74rem;
@@ -486,7 +507,7 @@ th[aria-sort="descending"] .ordenador {
 }
 
 .tabela td {
-  padding: 13px 14px;
+  padding: 13px 10px;
   border-bottom: 1px solid var(--borda);
   vertical-align: middle;
 }
@@ -503,7 +524,10 @@ th[aria-sort="descending"] .ordenador {
   background: var(--azul-050);
 }
 
+/* Sem largura minima o nome quebra em tres linhas e as alturas de linha
+   ficam irregulares. */
 .celula-nome {
+  min-width: 190px;
   font-weight: 570;
 }
 
@@ -515,6 +539,7 @@ th[aria-sort="descending"] .ordenador {
 .telefone {
   color: var(--texto-medio);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .atraso-vencido {
@@ -575,11 +600,12 @@ th[aria-sort="descending"] .ordenador {
   display: flex;
   gap: 6px;
   justify-content: flex-end;
+  white-space: nowrap;
 }
 
 .botao-linha {
-  min-height: 32px;
-  padding: 0 13px;
+  min-height: 31px;
+  padding: 0 11px;
   border: 1px solid var(--borda-forte);
   border-radius: var(--raio-pilula);
   background: var(--superficie);
@@ -618,11 +644,19 @@ th[aria-sort="descending"] .ordenador {
 /* ---------- Historico (cartao escuro) ---------- */
 
 .historico {
+  flex: 1;
   margin: 0;
   padding: 0;
-  max-height: 560px;
+  min-height: 0;
   overflow-y: auto;
   list-style: none;
+}
+
+/* O cartao escuro acompanha a altura da tabela em vez de deixar vazio. */
+.cartao-escuro {
+  display: flex;
+  flex-direction: column;
+  max-height: 860px;
 }
 
 .historico li {
@@ -923,7 +957,8 @@ th[aria-sort="descending"] .ordenador {
 
 /* ---------- Responsivo ---------- */
 
-@media (max-width: 1080px) {
+/* Empilha antes de a tabela ficar espremida a ponto de transbordar. */
+@media (max-width: 1280px) {
   .grade {
     grid-template-columns: minmax(0, 1fr);
   }
