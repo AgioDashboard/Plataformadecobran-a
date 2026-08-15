@@ -39,6 +39,7 @@ export async function receber(
   requisicao: Request,
   config: Config,
   db: D1Database,
+  ctx: ExecutionContext,
 ): Promise<Response> {
   const corpo = await requisicao.text();
 
@@ -95,17 +96,20 @@ export async function receber(
       idExterno: mensagem.id,
     });
 
-    try {
-      await responderCliente(config, db, mensagem.from, texto);
-    } catch (erro) {
-      // Falha ao responder nunca vira 500: a Meta reenviaria o webhook e o
-      // cliente receberia a mesma mensagem duas vezes.
-      await registrarAuditoria(db, {
-        acao: 'erro-ao-responder',
-        telefone: mensagem.from,
-        detalhe: String(erro).slice(0, 300),
-      });
-    }
+    // A decisao da IA leva segundos. A Meta espera 200 rapido e reenvia o
+    // webhook se demorarmos — o cliente receberia a mesma resposta duas
+    // vezes. Por isso o processamento sai do caminho da resposta.
+    ctx.waitUntil(
+      responderCliente(config, db, mensagem.from, texto).catch(async (erro) => {
+        await registrarAuditoria(db, {
+          acao: 'erro-ao-responder',
+          telefone: mensagem.from,
+          detalhe: String(erro).slice(0, 300),
+        }).catch(() => {
+          // Sem banco nao ha o que registrar; nao derrubar o waitUntil.
+        });
+      }),
+    );
   }
 
   return new Response('ok', { status: 200 });

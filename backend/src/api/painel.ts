@@ -4,12 +4,11 @@ import { definirPausaGlobal, definirSilencio, lerPausaGlobal } from '../dominio/
 // Comparacao em tempo constante tambem aqui: o token do painel merece o
 // mesmo cuidado que a assinatura do webhook.
 function tokensIguais(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diferenca = 0;
-  for (let i = 0; i < a.length; i += 1) {
-    diferenca |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return diferenca === 0;
+  const bytesA = new TextEncoder().encode(a);
+  const bytesB = new TextEncoder().encode(b);
+  // timingSafeEqual lanca se os tamanhos diferem, entao a checagem vem antes.
+  if (bytesA.length !== bytesB.length) return false;
+  return crypto.subtle.timingSafeEqual(bytesA, bytesB);
 }
 
 function autorizado(requisicao: Request, config: Config): boolean {

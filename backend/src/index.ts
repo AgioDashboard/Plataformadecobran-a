@@ -5,7 +5,8 @@ import { rotearPainel } from './api/painel.ts';
 import { lerPausaGlobal, registrarAuditoria } from './dominio/travas.ts';
 
 export default {
-  async fetch(requisicao: Request, env: Ambiente): Promise<Response> {
+  // ctx nao pode ser desestruturado: waitUntil perde o this e lanca.
+  async fetch(requisicao: Request, env: Ambiente, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(requisicao.url);
     const config = lerConfig(env);
 
@@ -15,7 +16,7 @@ export default {
 
     if (url.pathname === '/webhook') {
       if (requisicao.method === 'GET') return verificarInscricao(url, config);
-      if (requisicao.method === 'POST') return receber(requisicao, config, env.DB);
+      if (requisicao.method === 'POST') return receber(requisicao, config, env.DB, ctx);
       return new Response('Metodo nao permitido', { status: 405 });
     }
 

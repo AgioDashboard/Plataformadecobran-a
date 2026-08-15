@@ -15,12 +15,9 @@ function hexParaBytes(hex: string): Uint8Array | null {
 }
 
 function iguaisEmTempoConstante(a: Uint8Array, b: Uint8Array): boolean {
+  // timingSafeEqual lanca se os tamanhos diferem, entao a checagem vem antes.
   if (a.length !== b.length) return false;
-  let diferenca = 0;
-  for (let i = 0; i < a.length; i += 1) {
-    diferenca |= a[i] ^ b[i];
-  }
-  return diferenca === 0;
+  return crypto.subtle.timingSafeEqual(a, b);
 }
 
 export async function verificarAssinatura(
