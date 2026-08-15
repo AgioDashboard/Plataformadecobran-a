@@ -1,19 +1,11 @@
 import type { Config } from '../config.ts';
 import { definirPausaGlobal, definirSilencio, lerPausaGlobal } from '../dominio/travas.ts';
+import { textosIguaisEmTempoConstante } from '../seguranca/comparar.ts';
 
-// Comparacao em tempo constante tambem aqui: o token do painel merece o
-// mesmo cuidado que a assinatura do webhook.
-function tokensIguais(a: string, b: string): boolean {
-  const bytesA = new TextEncoder().encode(a);
-  const bytesB = new TextEncoder().encode(b);
-  // timingSafeEqual lanca se os tamanhos diferem, entao a checagem vem antes.
-  if (bytesA.length !== bytesB.length) return false;
-  return crypto.subtle.timingSafeEqual(bytesA, bytesB);
-}
-
+// O token do painel merece o mesmo cuidado que a assinatura do webhook.
 function autorizado(requisicao: Request, config: Config): boolean {
   const cabecalho = requisicao.headers.get('authorization') ?? '';
-  return tokensIguais(cabecalho, `Bearer ${config.painelToken}`);
+  return textosIguaisEmTempoConstante(cabecalho, `Bearer ${config.painelToken}`);
 }
 
 export async function rotearPainel(

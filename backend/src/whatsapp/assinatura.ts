@@ -5,6 +5,8 @@
 // Usa WebCrypto (disponivel em Workers e no Node) e comparacao em tempo
 // constante, para nao vazar informacao pelo tempo de resposta.
 
+import { iguaisEmTempoConstante } from '../seguranca/comparar.ts';
+
 function hexParaBytes(hex: string): Uint8Array | null {
   if (hex.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(hex)) return null;
   const bytes = new Uint8Array(hex.length / 2);
@@ -14,11 +16,6 @@ function hexParaBytes(hex: string): Uint8Array | null {
   return bytes;
 }
 
-function iguaisEmTempoConstante(a: Uint8Array, b: Uint8Array): boolean {
-  // timingSafeEqual lanca se os tamanhos diferem, entao a checagem vem antes.
-  if (a.length !== b.length) return false;
-  return crypto.subtle.timingSafeEqual(a, b);
-}
 
 export async function verificarAssinatura(
   corpo: string,
