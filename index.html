@@ -8,67 +8,162 @@
   </head>
   <body>
     <div id="painel" class="painel">
-      <header class="cabecalho">
-        <div>
-          <h1>Painel de Cobrança</h1>
-          <p class="subtitulo">Fase 1 — dados fictícios, nenhum disparo ativo</p>
-        </div>
-        <button
-          id="botao-pausa"
-          type="button"
-          class="botao-pausa"
-          aria-pressed="false"
+      <div class="moldura">
+        <header class="topo">
+          <a class="marca" href="#secao-clientes">Agio</a>
+
+          <nav class="navegacao" aria-label="Seções do painel">
+            <a href="#secao-resumo" class="pilula pilula-ativa">Painel</a>
+            <a href="#secao-clientes" class="pilula">Clientes</a>
+            <a href="#secao-historico" class="pilula">Histórico</a>
+          </nav>
+
+          <button id="botao-pausa" type="button" class="botao-pausa" aria-pressed="false">
+            <span class="ponto-pausa" aria-hidden="true"></span>
+            <span class="rotulo-pausa">Pausar disparos</span>
+          </button>
+        </header>
+
+        <div
+          id="faixa-pausa"
+          class="faixa-pausa"
+          role="status"
+          aria-live="assertive"
+          hidden
         >
-          Pausar disparos
-        </button>
-      </header>
+          Disparos pausados. Nenhuma mensagem será enviada até você retomar.
+        </div>
 
-      <div id="faixa-pausa" class="faixa-pausa" role="status" aria-live="assertive" hidden>
-        Disparos pausados. Nenhuma mensagem será enviada até você retomar.
+        <section id="secao-resumo" class="saudacao" aria-labelledby="titulo-resumo">
+          <div class="saudacao-texto">
+            <h1 id="titulo-resumo">Carteira de cobrança</h1>
+            <p class="subtitulo">Fase 1 — dados fictícios, nenhum disparo ativo</p>
+          </div>
+
+          <div class="numerao">
+            <div class="numero">
+              <span id="total-divida" class="numero-valor">—</span>
+              <span class="numero-rotulo">Em aberto</span>
+            </div>
+            <div class="numero">
+              <span id="total-clientes" class="numero-valor">—</span>
+              <span class="numero-rotulo">Clientes</span>
+            </div>
+            <div class="numero">
+              <span id="total-enviadas" class="numero-valor">—</span>
+              <span class="numero-rotulo">Mensagens hoje</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="composicao" aria-labelledby="titulo-composicao">
+          <h2 id="titulo-composicao" class="oculto-visualmente">Composição da carteira</h2>
+          <ul id="barras-status" class="barras"></ul>
+        </section>
+
+        <div class="grade">
+          <section id="secao-clientes" class="cartao cartao-largo" aria-labelledby="titulo-clientes">
+            <div class="cartao-topo">
+              <div>
+                <h2 id="titulo-clientes">Clientes inadimplentes</h2>
+                <p id="contador-resultados" class="contador">—</p>
+              </div>
+
+              <div class="controles">
+                <div class="campo-busca">
+                  <label for="busca" class="oculto-visualmente">Buscar cliente pelo nome</label>
+                  <input
+                    id="busca"
+                    type="search"
+                    class="entrada"
+                    placeholder="Buscar por nome…"
+                    autocomplete="off"
+                  />
+                </div>
+
+                <label for="filtro-status" class="oculto-visualmente">Filtrar por situação</label>
+                <select id="filtro-status" class="entrada entrada-seletor"></select>
+
+                <label for="filtro-faixa" class="oculto-visualmente">Filtrar por prazo</label>
+                <select id="filtro-faixa" class="entrada entrada-seletor"></select>
+
+                <button id="limpar-filtros" type="button" class="botao-discreto" hidden>
+                  Limpar
+                </button>
+              </div>
+            </div>
+
+            <div class="rolagem-tabela">
+              <table id="tabela-clientes" class="tabela">
+                <caption class="oculto-visualmente">
+                  Clientes com valores em aberto, com valor, vencimento e situação
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" aria-sort="none">
+                      <button type="button" class="ordenador" data-coluna="nome">
+                        Cliente <span class="seta" aria-hidden="true"></span>
+                      </button>
+                    </th>
+                    <th scope="col">Telefone</th>
+                    <th scope="col" class="numerico" aria-sort="none">
+                      <button type="button" class="ordenador" data-coluna="valor">
+                        Valor <span class="seta" aria-hidden="true"></span>
+                      </button>
+                    </th>
+                    <th scope="col" aria-sort="none">
+                      <button type="button" class="ordenador" data-coluna="vencimento">
+                        Vencimento <span class="seta" aria-hidden="true"></span>
+                      </button>
+                    </th>
+                    <th scope="col" aria-sort="none">
+                      <button type="button" class="ordenador" data-coluna="atraso">
+                        Atraso <span class="seta" aria-hidden="true"></span>
+                      </button>
+                    </th>
+                    <th scope="col">Situação</th>
+                    <th scope="col"><span class="oculto-visualmente">Ações</span></th>
+                  </tr>
+                </thead>
+                <tbody id="corpo-clientes"></tbody>
+              </table>
+            </div>
+
+            <p id="vazio-clientes" class="vazio" hidden>Nenhum cliente inadimplente.</p>
+            <p id="vazio-filtro" class="vazio" hidden>
+              Nenhum cliente corresponde aos filtros.
+              <button type="button" class="ligacao" data-limpar>Limpar filtros</button>
+            </p>
+          </section>
+
+          <section id="secao-historico" class="cartao cartao-escuro" aria-labelledby="titulo-historico">
+            <div class="cartao-topo">
+              <h2 id="titulo-historico">Histórico</h2>
+            </div>
+            <ul id="lista-historico" class="historico"></ul>
+            <p id="vazio-historico" class="vazio" hidden>Nenhuma mensagem enviada ainda.</p>
+          </section>
+        </div>
       </div>
-
-      <section class="totais" aria-label="Resumo">
-        <article class="cartao">
-          <h2>Total inadimplente</h2>
-          <p id="total-divida" class="cartao-valor">—</p>
-        </article>
-        <article class="cartao">
-          <h2>Clientes</h2>
-          <p id="total-clientes" class="cartao-valor">—</p>
-        </article>
-        <article class="cartao">
-          <h2>Mensagens hoje</h2>
-          <p id="total-enviadas" class="cartao-valor">—</p>
-        </article>
-      </section>
-
-      <section class="bloco" aria-labelledby="titulo-clientes">
-        <h2 id="titulo-clientes">Clientes inadimplentes</h2>
-        <table id="tabela-clientes" class="tabela">
-          <caption class="oculto-visualmente">
-            Clientes com valores em aberto, com valor, vencimento e situação
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Cliente</th>
-              <th scope="col">Telefone</th>
-              <th scope="col" class="numerico">Valor</th>
-              <th scope="col">Vencimento</th>
-              <th scope="col">Atraso</th>
-              <th scope="col">Situação</th>
-            </tr>
-          </thead>
-          <tbody id="corpo-clientes"></tbody>
-        </table>
-        <p id="vazio-clientes" class="vazio" hidden>Nenhum cliente inadimplente.</p>
-      </section>
-
-      <section class="bloco" aria-labelledby="titulo-historico">
-        <h2 id="titulo-historico">Histórico de mensagens</h2>
-        <ul id="lista-historico" class="historico"></ul>
-        <p id="vazio-historico" class="vazio" hidden>Nenhuma mensagem enviada ainda.</p>
-      </section>
     </div>
+
+    <div id="fundo-gaveta" class="fundo-gaveta" hidden></div>
+    <aside
+      id="gaveta"
+      class="gaveta"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="gaveta-titulo"
+      hidden
+    >
+      <div class="gaveta-topo">
+        <h2 id="gaveta-titulo">Detalhe do cliente</h2>
+        <button id="fechar-gaveta" type="button" class="botao-fechar" aria-label="Fechar detalhe">
+          ✕
+        </button>
+      </div>
+      <div id="gaveta-conteudo" class="gaveta-conteudo"></div>
+    </aside>
 
     <script type="module" src="app.js"></script>
   </body>
