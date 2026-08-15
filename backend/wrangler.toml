@@ -1,0 +1,16 @@
+name = "cobranca-backend"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "cobranca"
+database_id = "PREENCHER_APOS_CRIAR"
+
+# 12:00 UTC = 9h em Brasilia. Dias uteis apenas. A janela de horario e uma
+# trava de conformidade, nao um detalhe de agendamento.
+[triggers]
+crons = ["0 12 * * 1-5"]
+
+[vars]
+AMBIENTE = "teste"
