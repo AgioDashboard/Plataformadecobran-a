@@ -33,8 +33,14 @@ em arquivo público, e é por isso que o mock é inteiramente fictício.
 
 ## Arquitetura
 
-Site estático, sem etapa de build e sem dependência externa. Não há CDN: o
-painel abre direto do sistema de arquivos.
+Site estático, sem etapa de build e sem nenhuma dependência instalada. Não há
+CDN: o painel funciona offline.
+
+A lógica pura fica em módulos ES separados da renderização, para poder ser
+testada. Módulos ES não carregam por `file://` (bloqueio de CORS do
+navegador), então o painel é servido por `node servidor-local.js` — um
+servidor estático de poucas linhas em Node puro, sem dependências. É também
+o modo como o GitHub Pages servirá o painel.
 
 | Arquivo | Responsabilidade |
 | --- | --- |
@@ -121,7 +127,10 @@ funcional no botão de pausa.
 
 ## Verificação
 
-Sem framework de teste nesta fase. Verificação manual no navegador:
+A lógica pura (formatação, dias em atraso, máscara, totais, estado da pausa)
+é coberta por testes automatizados com o executor embutido do Node
+(`node --test`), sem nenhuma dependência instalada. A renderização é
+verificada manualmente no navegador:
 
 1. Tabela renderiza todos os clientes do mock com valor formatado em BRL.
 2. Dias em atraso batem com as datas do mock; vencimento futuro mostra
