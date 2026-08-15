@@ -1,0 +1,23 @@
+# Segredos — NUNCA versionar.
+# O GitHub Pages publica o conteudo do repositorio, mesmo em repositorio privado.
+.env
+.env.*
+!.env.exemplo
+*.key
+*.pem
+credenciais.json
+segredos.json
+
+# Dependencias e build (Fase 2)
+node_modules/
+dist/
+.vercel/
+.wrangler/
+
+# Sistema operacional / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+.idea/
+.vscode/
+*.log
