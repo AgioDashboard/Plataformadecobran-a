@@ -192,27 +192,57 @@
               </div>
             </div>
 
-            <form id="forma-regras" class="forma-regras">
-              <label class="campo-regra">
-                <span>Desconto máximo (%)</span>
-                <input id="regra-desconto" class="entrada" type="number" min="0" max="100" step="0.5" required />
-              </label>
+            <div class="regras-colunas">
+              <form id="forma-regras" class="forma-regras">
+                <table class="tabela tabela-faixas">
+                  <caption class="oculto-visualmente">Faixas de parcelamento</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">De</th>
+                      <th scope="col">Até</th>
+                      <th scope="col">Desconto (%)</th>
+                      <th scope="col"><span class="oculto-visualmente">Remover</span></th>
+                    </tr>
+                  </thead>
+                  <tbody id="corpo-faixas"></tbody>
+                </table>
 
-              <label class="campo-regra">
-                <span>Parcelamento máximo</span>
-                <input id="regra-parcelas" class="entrada" type="number" min="1" max="60" step="1" required />
-              </label>
+                <button type="button" id="acrescentar-faixa" class="botao-discreto">
+                  Acrescentar faixa
+                </button>
 
-              <label class="campo-regra">
-                <span>Comissão sobre o valor recuperado (%)</span>
-                <input id="regra-comissao" class="entrada" type="number" min="0" max="100" step="0.5" required />
-              </label>
+                <label class="campo-regra">
+                  <span>Parcela mínima (R$)</span>
+                  <input id="regra-parcela-minima" class="entrada" type="number" min="1" step="1" required />
+                </label>
 
-              <div class="acoes-regras">
-                <button type="submit" class="botao-discreto">Salvar regras</button>
-                <span id="aviso-regras" class="aviso-regras" role="status"></span>
-              </div>
-            </form>
+                <label class="campo-regra">
+                  <span>Teto de desconto da assessoria (%)</span>
+                  <input id="regra-teto" class="entrada" type="number" min="0" max="100" step="0.5" required />
+                </label>
+
+                <label class="campo-regra">
+                  <span>Comissão sobre o valor recuperado (%)</span>
+                  <input id="regra-comissao" class="entrada" type="number" min="0" max="100" step="0.5" required />
+                </label>
+
+                <div class="acoes-regras">
+                  <button type="submit" class="botao-discreto">Salvar regras</button>
+                  <span id="aviso-regras" class="aviso-regras" role="status"></span>
+                </div>
+              </form>
+
+              <aside class="previa" aria-labelledby="titulo-previa">
+                <h3 id="titulo-previa">Prévia</h3>
+                <label class="campo-regra">
+                  <span>Dívida de exemplo (R$)</span>
+                  <input id="previa-valor" class="entrada" type="number" min="1" step="1" />
+                </label>
+                <p class="ajuda-previa">É exatamente isto que o devedor veria.</p>
+                <ul id="previa-ofertas" class="previa-lista"></ul>
+                <p id="previa-erro" class="aviso-regras" data-estado="erro" hidden></p>
+              </aside>
+            </div>
 
             <p class="aviso-bloqueio">
               Desconto configurado aqui <strong>não</strong> autoriza a IA a

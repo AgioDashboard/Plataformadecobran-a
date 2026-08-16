@@ -72,6 +72,18 @@ export async function salvarRegras(regras) {
   });
 }
 
+// Previa das ofertas: calcula e NAO grava. O calculo fica no servidor de
+// proposito — e a mesma funcao que o portal usa. Refazer a conta aqui no
+// navegador criaria duas fontes de verdade, e a previa mostraria uma coisa
+// enquanto o devedor veria outra.
+export async function previaDeOfertas(regras, saldoCentavos) {
+  return chamar(comCredor('/api/previa-ofertas'), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ ...regras, saldoCentavos }),
+  });
+}
+
 export async function carregarEstado() {
   return chamar('/api/estado');
 }

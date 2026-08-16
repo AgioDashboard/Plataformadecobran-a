@@ -17,6 +17,7 @@ import {
   carregarTelefones,
   definirPausa,
   definirSilencio,
+  previaDeOfertas,
   salvarRegras,
 } from './dados-remotos.js';
 import {
@@ -540,9 +541,166 @@ async function recarregarDoServidor() {
   renderizar();
 }
 
-// Regras comerciais do credor: desconto maximo, parcelamento e comissao
-// sobre o valor recuperado. Quem edita e o operador da assessoria; o
-// servidor recusa qualquer outra sessao com 403.
+/* ---------- Regras comerciais do credor ---------- */
+
+// Faixas de parcelamento, parcela minima, teto de desconto e comissao. Quem
+// edita e o operador da assessoria; o servidor recusa qualquer outra sessao
+// com 403. A validacao que vale e sempre a do servidor — o formulario apenas
+// a espelha, e a previa mostra o resultado da funcao que o portal usa.
+let faixasEmEdicao = [];
+let regrasSalvas = null;
+
+function lerRegrasDaTela() {
+  return {
+    faixas: faixasEmEdicao.map((f) => ({
+      de: Number(f.de),
+      ate: Number(f.ate),
+      descontoPct: Number(f.descontoPct),
+    })),
+    // A tela pede reais porque e assim que o operador pensa; a API so
+    // conhece centavos.
+    parcelaMinimaCentavos: Math.round(Number(elemento('regra-parcela-minima').value) * 100),
+    descontoTetoPct: Number(elemento('regra-teto').value),
+    comissaoSobreRecuperadoPct: Number(elemento('regra-comissao').value),
+  };
+}
+
+const ROTULOS_CAMPO_FAIXA = {
+  de: 'De',
+  ate: 'Até',
+  descontoPct: 'Desconto',
+};
+
+function linhaDeFaixa(faixa, indice) {
+  const tr = document.createElement('tr');
+
+  for (const campo of ['de', 'ate', 'descontoPct']) {
+    const td = document.createElement('td');
+    const input = document.createElement('input');
+    input.className = 'entrada';
+    input.type = 'number';
+    input.min = campo === 'descontoPct' ? '0' : '1';
+    input.step = campo === 'descontoPct' ? '0.5' : '1';
+    input.value = faixa[campo];
+    input.setAttribute('aria-label', `${ROTULOS_CAMPO_FAIXA[campo]} da faixa ${indice + 1}`);
+    input.addEventListener('input', () => {
+      faixasEmEdicao[indice][campo] = input.value;
+      agendarPrevia();
+    });
+    td.append(input);
+    tr.append(td);
+  }
+
+  const tdRemover = document.createElement('td');
+  const remover = document.createElement('button');
+  remover.type = 'button';
+  remover.className = 'botao-linha';
+  remover.textContent = 'Remover';
+  remover.setAttribute('aria-label', `Remover a faixa ${indice + 1}`);
+  remover.addEventListener('click', () => {
+    faixasEmEdicao.splice(indice, 1);
+    renderizarFaixas();
+    agendarPrevia();
+  });
+  tdRemover.append(remover);
+  tr.append(tdRemover);
+
+  return tr;
+}
+
+function renderizarFaixas() {
+  elemento('corpo-faixas').replaceChildren(...faixasEmEdicao.map(linhaDeFaixa));
+}
+
+// Espera curta para nao chamar o servidor a cada tecla.
+let temporizadorPrevia = null;
+function agendarPrevia() {
+  clearTimeout(temporizadorPrevia);
+  temporizadorPrevia = setTimeout(atualizarPrevia, 350);
+}
+
+// Duas previas podem estar no ar ao mesmo tempo, e nada garante que voltem na
+// ordem em que sairam: uma resposta antiga chegando depois pintaria a tela com
+// dinheiro que ja nao corresponde ao formulario. Cada chamada leva um numero e
+// so a mais recente tem permissao de escrever na tela.
+let previaMaisRecente = 0;
+
+async function atualizarPrevia() {
+  const minhaVez = (previaMaisRecente += 1);
+  const souAAtual = () => minhaVez === previaMaisRecente;
+
+  const saldo = Math.round(Number(elemento('previa-valor').value) * 100);
+  const lista = elemento('previa-ofertas');
+  const erro = elemento('previa-erro');
+
+  if (!Number.isFinite(saldo) || saldo <= 0) {
+    lista.replaceChildren();
+    erro.textContent = 'Informe um valor de exemplo.';
+    erro.hidden = false;
+    return;
+  }
+
+  let resposta;
+  try {
+    resposta = await previaDeOfertas(lerRegrasDaTela(), saldo);
+  } catch (e) {
+    if (!souAAtual()) return;
+    lista.replaceChildren();
+    erro.textContent = `Não foi possível calcular a prévia: ${e.message}`;
+    erro.hidden = false;
+    return;
+  }
+
+  if (!souAAtual()) return;
+
+  // Configuracao invalida volta como 200 com ok:false: enquanto se digita, a
+  // configuracao passa por estados invalidos o tempo todo.
+  erro.hidden = resposta.ok;
+  if (!resposta.ok) {
+    erro.textContent = resposta.motivo;
+    lista.replaceChildren();
+    return;
+  }
+
+  lista.replaceChildren(
+    ...resposta.ofertas.map((o) => {
+      const li = document.createElement('li');
+      li.className = 'previa-item';
+
+      const titulo = document.createElement('span');
+      titulo.className = 'previa-parcelas';
+      // "A vista" nao e um tipo guardado: e simplesmente uma parcela.
+      titulo.textContent =
+        o.parcelas === 1
+          ? `À vista ${formatarMoeda(o.totalCentavos)}`
+          : `${o.parcelas}x de ${formatarMoeda(o.valorParcelaCentavos)}`;
+
+      const total = document.createElement('span');
+      total.className = 'previa-total';
+      total.textContent =
+        o.descontoPct > 0
+          ? `Total ${formatarMoeda(o.totalCentavos)} — ${o.descontoPct}% de desconto`
+          : `Total ${formatarMoeda(o.totalCentavos)}`;
+
+      li.append(titulo, total);
+      return li;
+    }),
+  );
+}
+
+// Mudanca grande pede confirmacao: pega o 90 digitado no lugar do 9.
+const SALTO_QUE_PEDE_CONFIRMACAO = 10;
+
+function saltoDeDesconto(antes, depois) {
+  let maior = 0;
+  for (const nova of depois.faixas) {
+    const equivalente = antes.faixas.find((f) => f.de === nova.de && f.ate === nova.ate);
+    const anterior = equivalente ? equivalente.descontoPct : 0;
+    maior = Math.max(maior, nova.descontoPct - anterior);
+  }
+  return maior;
+}
+
 async function montarRegras() {
   const secao = elemento('secao-regras');
   let credor;
@@ -555,31 +713,60 @@ async function montarRegras() {
     return;
   }
 
-  elemento('regra-desconto').value = credor.regras.descontoMaximoPct;
-  elemento('regra-parcelas').value = credor.regras.parcelamentoMaximo;
+  regrasSalvas = credor.regras;
+  faixasEmEdicao = credor.regras.faixas.map((f) => ({ ...f }));
+  renderizarFaixas();
+
+  elemento('regra-parcela-minima').value = credor.regras.parcelaMinimaCentavos / 100;
+  elemento('regra-teto').value = credor.regras.descontoTetoPct;
   elemento('regra-comissao').value = credor.regras.comissaoSobreRecuperadoPct;
+  // A previa comeca na media das dividas em aberto: caso real, e nao numero
+  // inventado que nao se parece com a carteira.
+  elemento('previa-valor').value = (credor.exemploCentavos ?? 100000) / 100;
   secao.hidden = false;
+
+  for (const id of ['regra-parcela-minima', 'regra-teto', 'regra-comissao', 'previa-valor']) {
+    elemento(id).addEventListener('input', agendarPrevia);
+  }
+
+  elemento('acrescentar-faixa').addEventListener('click', () => {
+    const ultima = faixasEmEdicao[faixasEmEdicao.length - 1];
+    const inicio = ultima ? Number(ultima.ate) + 1 : 1;
+    faixasEmEdicao.push({ de: inicio, ate: inicio, descontoPct: 0 });
+    renderizarFaixas();
+    agendarPrevia();
+  });
 
   elemento('forma-regras').addEventListener('submit', async (evento) => {
     evento.preventDefault();
     const aviso = elemento('aviso-regras');
+    const novas = lerRegrasDaTela();
+
+    const salto = saltoDeDesconto(regrasSalvas, novas);
+    if (salto > SALTO_QUE_PEDE_CONFIRMACAO) {
+      const ok = confirm(
+        `Uma faixa sobe ${salto} pontos de desconto de uma vez.\n\n` +
+          `Antes: ${regrasSalvas.faixas.map((f) => `${f.de}-${f.ate}x ${f.descontoPct}%`).join(', ')}\n` +
+          `Depois: ${novas.faixas.map((f) => `${f.de}-${f.ate}x ${f.descontoPct}%`).join(', ')}\n\n` +
+          'Confirma?',
+      );
+      if (!ok) return;
+    }
+
     aviso.textContent = 'Salvando…';
     aviso.removeAttribute('data-estado');
 
-    // A faixa de valores tambem esta no input, mas a validacao que vale e a
-    // do servidor: o atributo max some com um clique no console.
     try {
-      await salvarRegras({
-        descontoMaximoPct: Number(elemento('regra-desconto').value),
-        parcelamentoMaximo: Number(elemento('regra-parcelas').value),
-        comissaoSobreRecuperadoPct: Number(elemento('regra-comissao').value),
-      });
+      await salvarRegras(novas);
+      regrasSalvas = novas;
       aviso.textContent = 'Regras salvas.';
     } catch (erro) {
       aviso.textContent = `Não foi possível salvar: ${erro.message}`;
       aviso.dataset.estado = 'erro';
     }
   });
+
+  await atualizarPrevia();
 }
 
 async function iniciar() {

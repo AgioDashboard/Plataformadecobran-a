@@ -233,10 +233,104 @@ body {
 
 /* ---------- Regras comerciais do credor ---------- */
 
+/* Formulario a esquerda, previa a direita. minmax(0, ...) na primeira coluna
+   porque tabela em grade nao encolhe abaixo do conteudo sem isso, e a
+   segunda coluna acabaria empurrada para fora do cartao. */
+.regras-colunas {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(220px, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+
 .forma-regras {
   display: grid;
   gap: 14px;
   margin-top: 12px;
+}
+
+/* So o botao encolhe; os campos continuam ocupando a coluna inteira. */
+#acrescentar-faixa {
+  justify-self: start;
+}
+
+/* table-layout: fixed porque a largura automatica respeita o min-content dos
+   tres <input type="number"> — que somados passam de 600px e empurrariam a
+   previa para fora do cartao. Com layout fixo as colunas seguem as
+   porcentagens abaixo e a tabela cabe na coluna que recebeu. */
+.tabela-faixas {
+  margin-top: 4px;
+  table-layout: fixed;
+}
+
+.tabela-faixas th:nth-child(3) {
+  width: 34%;
+}
+
+.tabela-faixas th:last-child {
+  width: 22%;
+}
+
+/* min-width: 0 e o que permite ao input encolher: o tamanho intrinseco dele
+   nao cede sozinho. */
+.tabela-faixas .entrada {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 8px;
+}
+
+.tabela-faixas th,
+.tabela-faixas td {
+  padding: 6px 6px;
+}
+
+.previa {
+  padding: 16px;
+  border-radius: var(--raio-medio);
+  background: var(--azul-050);
+}
+
+.previa h3 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.ajuda-previa {
+  margin: 0 0 10px;
+  color: var(--texto-medio);
+  font-size: 0.8rem;
+}
+
+.previa-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.previa-item {
+  padding: 10px 12px;
+  border-radius: var(--raio-medio);
+  background: var(--superficie);
+}
+
+.previa-parcelas {
+  font-weight: 650;
+}
+
+.previa-total {
+  display: block;
+  margin-top: 2px;
+  color: var(--texto-medio);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 900px) {
+  .regras-colunas {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .campo-regra {
