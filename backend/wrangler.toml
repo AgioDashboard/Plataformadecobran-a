@@ -16,6 +16,7 @@ head_sampling_rate = 1
 binding = "DB"
 database_name = "cobranca"
 database_id = "02b87870-9e17-4c4f-b384-0e6bf335cba2"
+migrations_dir = "migracoes"
 
 # 12:00 UTC = 9h em Brasilia. Dias uteis apenas. A janela de horario e uma
 # trava de conformidade, nao um detalhe de agendamento.

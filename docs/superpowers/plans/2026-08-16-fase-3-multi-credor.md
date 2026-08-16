@@ -98,11 +98,11 @@ Registradas aqui porque cada uma fecha uma alternativa que parece razoável à p
 - Consumes: nada.
 - Produces: `type CredorId`, `function comoCredorId(bruto: string): CredorId | null`, `interface RegrasCredor { descontoMaximoPct: number; parcelamentoMaximo: number; comissaoSobreRecuperadoPct: number }`, `function validarRegras(r: RegrasCredor): { ok: true } | { ok: false; motivo: string }`.
 
-- [ ] **Step 1: Criar o diretório de migrações com o schema atual**
+- [x] **Step 1: Criar o diretório de migrações com o schema atual**
 
 Copie o conteúdo integral de `backend/src/db/esquema.sql` para `backend/migracoes/0001_esquema_inicial.sql`, sem alterar uma linha. Todo comando lá já é `CREATE TABLE IF NOT EXISTS` / `INSERT OR IGNORE`, então aplicar num banco que já tem essas tabelas não faz nada — é isso que permite adotar migrações sem recriar o banco de produção.
 
-- [ ] **Step 2: Escrever a migração dos credores**
+- [x] **Step 2: Escrever a migração dos credores**
 
 `backend/migracoes/0002_credores.sql`:
 
@@ -133,7 +133,7 @@ VALUES
   ('credor-padrao', 'Carteira inicial', NULL, 1, 0, 1, 0, '2026-08-16T00:00:00.000Z');
 ```
 
-- [ ] **Step 3: Apontar o wrangler para o diretório**
+- [x] **Step 3: Apontar o wrangler para o diretório**
 
 Em `backend/wrangler.toml`, dentro do bloco `[[d1_databases]]`, acrescente a última linha:
 
@@ -152,7 +152,7 @@ Em `backend/package.json`, acrescente aos `scripts`:
 "migrar:remoto": "wrangler d1 migrations apply cobranca --remote"
 ```
 
-- [ ] **Step 4: Escrever o teste das regras comerciais (vai falhar)**
+- [x] **Step 4: Escrever o teste das regras comerciais (vai falhar)**
 
 `backend/testes/credor.test.ts`:
 
@@ -203,7 +203,7 @@ test('identificador com aspas ou espaco e recusado', () => {
 });
 ```
 
-- [ ] **Step 5: Rodar e confirmar a falha**
+- [x] **Step 5: Rodar e confirmar a falha**
 
 ```bash
 cd backend && npm run teste
@@ -211,7 +211,7 @@ cd backend && npm run teste
 
 Esperado: falha em `Cannot find module '../src/dominio/credor.ts'`.
 
-- [ ] **Step 6: Implementar**
+- [x] **Step 6: Implementar**
 
 `backend/src/dominio/credor.ts`:
 
@@ -262,7 +262,7 @@ export function validarRegras(r: RegrasCredor): Validacao {
 }
 ```
 
-- [ ] **Step 7: Rodar os testes**
+- [x] **Step 7: Rodar os testes**
 
 ```bash
 cd backend && npm run teste
@@ -270,7 +270,7 @@ cd backend && npm run teste
 
 Esperado: os 8 testes novos passam, os 67 anteriores continuam passando.
 
-- [ ] **Step 8: Aplicar as migrações no banco local e conferir**
+- [x] **Step 8: Aplicar as migrações no banco local e conferir**
 
 ```bash
 cd backend && npm run migrar
@@ -282,7 +282,7 @@ cd backend && npx wrangler d1 execute cobranca --local --command "SELECT id, nom
 
 Esperado: uma linha, `credor-padrao | Carteira inicial | 1`.
 
-- [ ] **Step 9: Remover o schema antigo e commitar**
+- [x] **Step 9: Remover o schema antigo e commitar**
 
 Apague `backend/src/db/esquema.sql` — ele agora é a migração `0001` e manter duas cópias garante que uma vai divergir. Confira antes que nenhum arquivo o importe:
 
