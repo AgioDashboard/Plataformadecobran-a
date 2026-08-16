@@ -321,7 +321,27 @@ git add backend/src/dominio/cpf.ts backend/testes/cpf.test.ts backend/src/cobmai
 
 ---
 
-### Task 2: Ofertas — cálculo determinístico
+### Task 2: Ofertas — cálculo determinístico ⛔ SUBSTITUÍDA — NÃO EXECUTE
+
+> **Esta tarefa foi substituída em 2026-08-16** pela Task 2 de
+> `docs/superpowers/plans/2026-08-16-configuracao-de-ofertas.md`.
+>
+> O usuário pediu uma tela onde possa alterar ofertas e parcelas a qualquer
+> momento. Com ela, `descontoMaximoPct` e `parcelamentoMaximo` deixam de
+> existir: `RegrasCredor` passa a ter uma **tabela de faixas de
+> parcelamento**, e `gerarOfertas` percorre as faixas. O código abaixo
+> calcula sobre os campos antigos e não compila mais.
+>
+> A `Oferta` do plano novo **não tem o campo `tipo`** — "à vista" é
+> `parcelas === 1`. Onde as Tasks 6, 7 e 9 deste plano escrevem
+> `oferta.tipo === 'a_vista'`, leia `oferta.parcelas === 1`; na gravação do
+> acordo, derive `parcelas === 1 ? 'a_vista' : 'parcelado'` para a coluna
+> `tipo` da tabela.
+>
+> As demais tarefas deste plano continuam válidas.
+
+<details>
+<summary>Versão original, mantida como registro</summary>
 
 **Files:**
 - Create: `backend/src/dominio/ofertas.ts`, `backend/testes/ofertas.test.ts`
@@ -481,6 +501,8 @@ cd backend && npm run teste && npx tsc --noEmit
 ```bash
 git add backend/src/dominio/ofertas.ts backend/testes/ofertas.test.ts && git commit -m "Calcula as condicoes de acordo a partir da politica do credor" && git push
 ```
+
+</details>
 
 ---
 
