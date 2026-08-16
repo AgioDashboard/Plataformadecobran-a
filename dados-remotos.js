@@ -23,7 +23,12 @@ async function chamar(caminho, opcoes = {}) {
     throw new Error('Sessao expirada. Recarregue a pagina para entrar de novo.');
   }
   if (!resposta.ok) {
-    throw new Error(`Falha ao acessar ${caminho} (HTTP ${resposta.status})`);
+    // A API devolve o motivo em texto puro (ex.: "desconto maximo deve ficar
+    // entre 0 e 100"). Sem ele, uma recusa de validacao chegaria a tela como
+    // "HTTP 400" e o operador nao saberia o que corrigir.
+    const motivo = await resposta.text().catch(() => '');
+    const detalhe = motivo.trim() ? `: ${motivo.trim()}` : '';
+    throw new Error(`Falha ao acessar ${caminho} (HTTP ${resposta.status})${detalhe}`);
   }
   return resposta.json();
 }
@@ -46,6 +51,16 @@ export async function carregarDevedores() {
 
 export async function carregarRegras() {
   return chamar(comCredor('/api/regras'));
+}
+
+// So o operador da assessoria consegue gravar. Sessao de credor recebe 403
+// do servidor — o painel nao tenta contornar isso, apenas esconde a secao.
+export async function salvarRegras(regras) {
+  return chamar(comCredor('/api/regras'), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(regras),
+  });
 }
 
 export async function carregarEstado() {

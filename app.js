@@ -13,8 +13,10 @@ import {
   carregarCredores,
   carregarDevedores,
   carregarEstado,
+  carregarRegras,
   definirPausa,
   definirSilencio,
+  salvarRegras,
 } from './dados-remotos.js';
 import {
   formatarMoeda,
@@ -534,6 +536,48 @@ async function recarregarDoServidor() {
   renderizar();
 }
 
+// Regras comerciais do credor: desconto maximo, parcelamento e comissao
+// sobre o valor recuperado. Quem edita e o operador da assessoria; o
+// servidor recusa qualquer outra sessao com 403.
+async function montarRegras() {
+  const secao = elemento('secao-regras');
+  let credor;
+  try {
+    credor = await carregarRegras();
+  } catch {
+    // 403 = sessao de credor, que nao edita as proprias regras. A secao
+    // simplesmente nao aparece; nao ha erro a mostrar.
+    secao.hidden = true;
+    return;
+  }
+
+  elemento('regra-desconto').value = credor.regras.descontoMaximoPct;
+  elemento('regra-parcelas').value = credor.regras.parcelamentoMaximo;
+  elemento('regra-comissao').value = credor.regras.comissaoSobreRecuperadoPct;
+  secao.hidden = false;
+
+  elemento('forma-regras').addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+    const aviso = elemento('aviso-regras');
+    aviso.textContent = 'Salvando…';
+    aviso.removeAttribute('data-estado');
+
+    // A faixa de valores tambem esta no input, mas a validacao que vale e a
+    // do servidor: o atributo max some com um clique no console.
+    try {
+      await salvarRegras({
+        descontoMaximoPct: Number(elemento('regra-desconto').value),
+        parcelamentoMaximo: Number(elemento('regra-parcelas').value),
+        comissaoSobreRecuperadoPct: Number(elemento('regra-comissao').value),
+      });
+      aviso.textContent = 'Regras salvas.';
+    } catch (erro) {
+      aviso.textContent = `Não foi possível salvar: ${erro.message}`;
+      aviso.dataset.estado = 'erro';
+    }
+  });
+}
+
 async function iniciar() {
   preencherSeletores();
   ligarEventos();
@@ -547,6 +591,7 @@ async function iniciar() {
     if (!temCredor) return;
 
     await recarregarDoServidor();
+    await montarRegras();
     limparErro();
   } catch (erro) {
     mostrarErro(
