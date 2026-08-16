@@ -32,18 +32,3 @@ export const clientes = [
   { id: 'c-024', nome: 'Xingu Logistica Integrada', telefone: '5511900000024', valorCentavos: 528700, vencimento: '2026-08-24', status: 'aguardando' },
   { id: 'c-025', nome: 'Zenite Clinica Odontologica', telefone: '5511900000025', valorCentavos: 316450, vencimento: '2026-09-02', status: 'aguardando' },
 ];
-
-export const historico = [
-  { id: 'h-001', clienteId: 'c-022', quando: '2026-08-15T09:12:00-03:00', canal: 'whatsapp', resultado: 'enviada', trecho: 'Ola. Identificamos uma pendencia em aberto vencida hoje…' },
-  { id: 'h-002', clienteId: 'c-019', quando: '2026-08-15T09:10:00-03:00', canal: 'whatsapp', resultado: 'falhou', trecho: 'Numero sem WhatsApp ativo.' },
-  { id: 'h-003', clienteId: 'c-016', quando: '2026-08-14T16:40:00-03:00', canal: 'whatsapp', resultado: 'enviada', trecho: 'Consta um valor vencido em 03/08…' },
-  { id: 'h-004', clienteId: 'c-012', quando: '2026-08-14T11:22:00-03:00', canal: 'whatsapp', resultado: 'enviada', trecho: 'Bom dia. Segue o lembrete do boleto em aberto…' },
-  { id: 'h-005', clienteId: 'c-010', quando: '2026-08-13T15:05:00-03:00', canal: 'whatsapp', resultado: 'enviada', trecho: 'Sobre a parcela vencida em 14/07…' },
-  { id: 'h-006', clienteId: 'c-007', quando: '2026-08-13T10:31:00-03:00', canal: 'whatsapp', resultado: 'enviada', trecho: 'Lembrete amigavel sobre a pendencia…' },
-  { id: 'h-007', clienteId: 'c-003', quando: '2026-08-12T14:18:00-03:00', canal: 'whatsapp', resultado: 'falhou', trecho: 'Mensagem nao entregue apos tres tentativas.' },
-  { id: 'h-008', clienteId: 'c-002', quando: '2026-08-12T09:47:00-03:00', canal: 'whatsapp', resultado: 'enviada', trecho: 'Terceiro contato sobre o valor de maio…' },
-  { id: 'h-009', clienteId: 'c-001', quando: '2026-08-11T16:02:00-03:00', canal: 'whatsapp', resultado: 'enviada', trecho: 'Retomando o contato sobre a pendencia de 12/05…' },
-  { id: 'h-010', clienteId: 'c-014', quando: '2026-08-11T08:55:00-03:00', canal: 'whatsapp', resultado: 'enviada', trecho: 'Primeiro contato sobre o vencimento de 28/07…' },
-  { id: 'h-011', clienteId: 'c-009', quando: '2026-08-10T13:40:00-03:00', canal: 'whatsapp', resultado: 'enviada', trecho: 'Segundo aviso referente ao valor em aberto…' },
-  { id: 'h-012', clienteId: 'c-005', quando: '2026-08-10T09:15:00-03:00', canal: 'whatsapp', resultado: 'falhou', trecho: 'Numero invalido no cadastro.' },
-];

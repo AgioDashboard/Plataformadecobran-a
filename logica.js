@@ -44,7 +44,7 @@ export function mascararTelefone(telefone) {
   return `(${ddd}) ${primeiro}****-${finais}`;
 }
 
-export function normalizarTelefone(bruto) {
+function normalizarTelefone(bruto) {
   return String(bruto ?? '').replace(/\D/g, '');
 }
 
@@ -55,7 +55,7 @@ export function normalizarTelefone(bruto) {
 // porque leva a operacao a confiar numa protecao que nao esta ali.
 //
 // Se a regra mudar no backend, tem de mudar aqui junto.
-export function formaCanonicaDeTelefone(bruto) {
+function formaCanonicaDeTelefone(bruto) {
   const d = normalizarTelefone(bruto);
   if (d.length === 13 && d.startsWith('55') && d[4] === '9') {
     return d.slice(0, 4) + d.slice(5);
@@ -77,12 +77,15 @@ function mesmoDia(dataISO, referencia) {
   );
 }
 
-export function calcularTotais(clientes, historico, hoje) {
+// Recebe as conversas reais do servidor. Antes esperava o historico
+// ficticio, com outro formato, e o app.js acabou calculando o total por
+// fora — o campo daqui saia sempre zero e ninguem percebia.
+export function calcularTotais(clientes, conversas, hoje) {
   return {
     totalCentavos: clientes.reduce((soma, cliente) => soma + cliente.valorCentavos, 0),
     quantidadeClientes: clientes.length,
-    enviadasHoje: historico.filter(
-      (entrada) => entrada.resultado === 'enviada' && mesmoDia(entrada.quando, hoje),
+    enviadasHoje: conversas.filter(
+      (c) => c.direcao === 'saida' && mesmoDia(c.quando, hoje),
     ).length,
   };
 }

@@ -50,16 +50,27 @@ test('calcularTotais soma divida, conta clientes e mensagens de hoje', () => {
     { id: 'c-1', valorCentavos: 100000 },
     { id: 'c-2', valorCentavos: 25050 },
   ];
-  const historico = [
-    { id: 'h-1', quando: '2026-08-15T08:00:00-03:00', resultado: 'enviada' },
-    { id: 'h-2', quando: '2026-08-14T08:00:00-03:00', resultado: 'enviada' },
-    { id: 'h-3', quando: '2026-08-15T09:30:00-03:00', resultado: 'falhou' },
+  // Formato das conversas do servidor: direcao 'saida' e o que conta como
+  // mensagem enviada. Entrada e mensagem do cliente, nao nossa.
+  const conversas = [
+    { quando: '2026-08-15T08:00:00-03:00', direcao: 'saida' },
+    { quando: '2026-08-14T08:00:00-03:00', direcao: 'saida' },
+    { quando: '2026-08-15T09:30:00-03:00', direcao: 'entrada' },
   ];
-  assert.deepEqual(calcularTotais(clientes, historico, hoje), {
+  assert.deepEqual(calcularTotais(clientes, conversas, hoje), {
     totalCentavos: 125050,
     quantidadeClientes: 2,
     enviadasHoje: 1,
   });
+});
+
+test('resposta recebida hoje nao conta como mensagem enviada', () => {
+  const hoje = new Date(2026, 7, 15, 9, 0);
+  const conversas = [
+    { quando: '2026-08-15T08:00:00-03:00', direcao: 'entrada' },
+    { quando: '2026-08-15T08:30:00-03:00', direcao: 'entrada' },
+  ];
+  assert.equal(calcularTotais([], conversas, hoje).enviadasHoje, 0);
 });
 
 test('calcularTotais lida com listas vazias', () => {

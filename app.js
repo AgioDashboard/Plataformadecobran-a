@@ -71,20 +71,10 @@ function haFiltroAtivo() {
 /* ---------- Resumo ---------- */
 
 function renderizarTotais(hoje) {
-  const totais = calcularTotais(clientesEmTela, [], hoje);
+  const totais = calcularTotais(clientesEmTela, conversas, hoje);
   elemento('total-divida').textContent = formatarMoeda(totais.totalCentavos);
   elemento('total-clientes').textContent = String(totais.quantidadeClientes);
-
-  const enviadasHoje = conversas.filter((c) => {
-    if (c.direcao !== 'saida') return false;
-    const quando = new Date(c.quando);
-    return (
-      quando.getFullYear() === hoje.getFullYear() &&
-      quando.getMonth() === hoje.getMonth() &&
-      quando.getDate() === hoje.getDate()
-    );
-  }).length;
-  elemento('total-enviadas').textContent = String(enviadasHoje);
+  elemento('total-enviadas').textContent = String(totais.enviadasHoje);
 }
 
 function renderizarBarras() {

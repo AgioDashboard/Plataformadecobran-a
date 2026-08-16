@@ -70,7 +70,7 @@ function valorDaColuna(cliente, coluna, hoje) {
   }
 }
 
-export const COLUNAS_ORDENAVEIS = ['nome', 'valor', 'vencimento', 'atraso'];
+const COLUNAS_ORDENAVEIS = ['nome', 'valor', 'vencimento', 'atraso'];
 
 export function ordenar(clientes, coluna, direcao, hoje) {
   if (!COLUNAS_ORDENAVEIS.includes(coluna)) return [...clientes];
