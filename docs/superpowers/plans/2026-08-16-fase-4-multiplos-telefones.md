@@ -1060,6 +1060,10 @@ Em outro terminal, dispare o cron manualmente:
 curl -s "http://127.0.0.1:8787/__scheduled?cron=0+12+*+*+1-5"
 ```
 
+Isto só funciona porque o script `dev` passa `--test-scheduled`. Sem a flag,
+o Miniflare não intercepta `/__scheduled`, a URL cai no roteador normal e
+devolve 404 — e é fácil ler esse 404 como "o cron não fez nada".
+
 ```bash
 cd backend && npx wrangler d1 execute cobranca --local --command "SELECT acao, detalhe FROM auditoria ORDER BY id DESC LIMIT 3"
 ```

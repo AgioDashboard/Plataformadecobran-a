@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node scripts/gerar-painel.mjs && wrangler dev",
+    "dev": "node scripts/gerar-painel.mjs && wrangler dev --test-scheduled",
     "deploy": "node scripts/gerar-painel.mjs && wrangler deploy",
     "teste": "node --test \"testes/*.test.ts\"",
     "migrar": "wrangler d1 migrations apply cobranca --local",
