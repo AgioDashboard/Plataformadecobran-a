@@ -36,6 +36,48 @@ test('coluna extra vazia nao vira telefone', () => {
   assert.deepEqual(interpretarCsv(csv)[0].telefonesExtras, []);
 });
 
+test('coluna de CPF e encontrada pelo cabecalho', () => {
+  const csv = [
+    'nome;telefone;valor;vencimento;cpf',
+    'Ana Ficticia;5535900000001;10,00;10/09/2026;529.982.247-25',
+  ].join('\n');
+  assert.equal(interpretarCsv(csv)[0].cpf, '52998224725');
+});
+
+test('cabecalho com CPF em outra posicao continua funcionando', () => {
+  // So o CPF e localizado pelo cabecalho; nome, telefone, valor e
+  // vencimento continuam sendo as quatro primeiras colunas. Por isso o CPF
+  // muda de lugar aqui sem que as outras saiam do posto.
+  const csv = [
+    'nome;telefone;valor;vencimento;obs;cpf',
+    'Ana Ficticia;5535900000001;10,00;10/09/2026;;52998224725',
+  ].join('\n');
+  assert.equal(interpretarCsv(csv)[0].cpf, '52998224725');
+});
+
+test('planilha sem coluna de CPF importa com cpf nulo', () => {
+  const csv = ['nome;telefone;valor;vencimento', 'Ana Ficticia;5535900000001;10,00;10/09/2026'].join('\n');
+  assert.equal(interpretarCsv(csv)[0].cpf, null);
+});
+
+test('CPF invalido na planilha vira nulo, nao texto', () => {
+  const csv = [
+    'nome;telefone;valor;vencimento;cpf',
+    'Ana Ficticia;5535900000001;10,00;10/09/2026;11111111111',
+  ].join('\n');
+  assert.equal(interpretarCsv(csv)[0].cpf, null);
+});
+
+test('a coluna de CPF nao vira telefone adicional', () => {
+  // Onze digitos passam no filtro de tamanho dos extras. Sem excluir a
+  // coluna, o devedor ganharia um telefone que e o proprio CPF dele.
+  const csv = [
+    'nome;telefone;valor;vencimento;cpf;tel2',
+    'Ana Ficticia;5535900000001;10,00;10/09/2026;52998224725;5535900000003',
+  ].join('\n');
+  assert.deepEqual(interpretarCsv(csv)[0].telefonesExtras, ['5535900000003']);
+});
+
 test('descarta linha sem telefone em vez de enviar para lugar nenhum', () => {
   const semTelefone = `nome;telefone;valor;vencimento\nX;;10,00;01/01/2026`;
   assert.deepEqual(interpretarCsv(semTelefone), []);

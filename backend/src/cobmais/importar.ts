@@ -2,13 +2,23 @@ import { normalizarNumero } from '../destinatarios.ts';
 import type { CredorId } from '../dominio/credor.ts';
 import { inserirDevedor, inserirDivida } from '../db/cadastro.ts';
 import { cadastrarTelefones } from '../db/telefones.ts';
+import { cpfValido, normalizarCpf } from '../dominio/cpf.ts';
 
 export interface Cliente {
   nome: string;
+  cpf: string | null;
   telefone: string;
   telefonesExtras: string[];
   valorCentavos: number;
   vencimento: string;
+}
+
+// A coluna de CPF e localizada pelo cabecalho, nao por posicao: o Cobmais
+// exporta layouts diferentes conforme o relatorio, e assumir a quinta
+// coluna quebraria em silencio no dia em que alguem trocasse o layout.
+function indiceDoCpf(cabecalho: string): number {
+  const colunas = cabecalho.split(';').map((c) => c.trim().toLowerCase());
+  return colunas.findIndex((c) => c === 'cpf' || c === 'documento' || c === 'cpf/cnpj');
 }
 
 // Planilha exportada do Cobmais: ponto e virgula, valor em pt-BR,
@@ -17,7 +27,10 @@ export interface Cliente {
 // Linha que nao interpreta e DESCARTADA, nunca adivinhada. Cobrar o valor
 // errado e pior do que nao cobrar.
 export function interpretarCsv(texto: string): Cliente[] {
-  const linhas = texto.trim().split(/\r?\n/).slice(1);
+  const todas = texto.trim().split(/\r?\n/);
+  const cabecalho = todas[0] ?? '';
+  const iCpf = indiceDoCpf(cabecalho);
+  const linhas = todas.slice(1);
 
   return linhas.flatMap((linha) => {
     const colunas = linha.split(';');
@@ -25,10 +38,11 @@ export function interpretarCsv(texto: string): Cliente[] {
     if (!nome || !telefoneBruto || !valorBruto || !vencimentoBruto) return [];
 
     // Colunas 5 em diante sao telefones adicionais, ate o teto de 5 no
-    // total. Planilha sem essas colunas continua funcionando.
+    // total. Planilha sem essas colunas continua funcionando. A coluna de
+    // CPF fica de fora: 11 digitos passariam no filtro de tamanho e o
+    // devedor ganharia um telefone que nunca existiu.
     const extras = colunas
-      .slice(4)
-      .map((c) => normalizarNumero(c))
+      .map((c, i) => (i >= 4 && i !== iCpf ? normalizarNumero(c) : ''))
       .filter((c) => c.length >= 10);
 
     const telefone = normalizarNumero(telefoneBruto);
@@ -42,9 +56,16 @@ export function interpretarCsv(texto: string): Cliente[] {
     const [dia, mes, ano] = vencimentoBruto.trim().split('/');
     if (!dia || !mes || !ano) return [];
 
+    // CPF invalido entra como null, nao como texto qualquer: e melhor o
+    // devedor ficar sem link do que receber um portal que nao consegue
+    // conferir quem ele e.
+    const cpfBruto = iCpf >= 0 ? (colunas[iCpf] ?? '') : '';
+    const cpf = cpfValido(cpfBruto) ? normalizarCpf(cpfBruto) : null;
+
     return [
       {
         nome: nome.trim(),
+        cpf,
         telefone,
         telefonesExtras: extras,
         valorCentavos: centavos,
@@ -78,8 +99,10 @@ export async function importarParaCarteira(
   let atualizados = 0;
 
   for (const cliente of clientes) {
-    // Reimportar a mesma planilha nao pode duplicar devedor. A chave e
-    // telefone dentro da carteira: o Cobmais nao exporta documento hoje.
+    // Reimportar a mesma planilha nao pode duplicar devedor. A chave segue
+    // sendo o telefone dentro da carteira, mesmo agora que o CPF pode vir
+    // na planilha: linha sem CPF valido continua existindo, e trocar de
+    // chave deixaria essas linhas sem deduplicacao nenhuma.
     const existente = await db
       .prepare('SELECT id FROM devedores WHERE credor_id = ? AND telefone = ?')
       .bind(credorId, cliente.telefone)
@@ -92,7 +115,7 @@ export async function importarParaCarteira(
     } else {
       devedorId = await inserirDevedor(db, credorId, {
         nome: cliente.nome,
-        documento: null,
+        documento: cliente.cpf,
         telefone: cliente.telefone,
       });
       criados += 1;
