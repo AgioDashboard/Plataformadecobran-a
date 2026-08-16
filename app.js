@@ -2,7 +2,10 @@
 // filtros.js, estado-pausa.js e nao-perturbe.js; aqui ha estado de tela e
 // manipulacao de DOM.
 
-import { clientes, historico } from './dados-mock.js';
+// A lista de clientes ainda vem do mock: nada grava clientes no servidor
+// ainda. O historico e real, vindo do D1 pelo backend.
+import { clientes } from './dados-mock.js';
+import { carregarConversas, carregarEstado, definirPausa } from './dados-remotos.js';
 import {
   formatarMoeda,
   diasEmAtraso,
@@ -11,13 +14,9 @@ import {
   calcularTotais,
 } from './logica.js';
 import { filtrar, ordenar, FAIXAS, STATUS } from './filtros.js';
-import { lerPausa, alternarPausa, lerEventosPausa } from './estado-pausa.js';
-import {
-  lerSilenciados,
-  estaSilenciado,
-  alternarSilencio,
-  lerEventosSilencio,
-} from './nao-perturbe.js';
+// Nao-perturbe da lista ficticia continua local. O nao-perturbe real, por
+// telefone, vive no servidor e e consultado antes de qualquer disparo.
+import { lerSilenciados, estaSilenciado, alternarSilencio } from './nao-perturbe.js';
 import { abrirDetalhe, fecharDetalhe, detalheAberto } from './detalhe-cliente.js';
 
 const ROTULOS_STATUS = {
@@ -43,6 +42,11 @@ function obterArmazenamento() {
 
 const armazenamento = obterArmazenamento();
 
+// Dado vindo do servidor. Comeca vazio e pausado: se a carga falhar, a tela
+// mostra "pausado", que e a leitura segura.
+let conversas = [];
+let servidor = { pausado: true, silenciados: [] };
+
 // Estado da tela. Toda interacao altera este objeto e chama renderizar().
 const tela = {
   busca: '',
@@ -58,10 +62,6 @@ const formatadorDataHora = new Intl.DateTimeFormat('pt-BR', {
   timeStyle: 'short',
 });
 
-function nomeDoCliente(clienteId) {
-  return clientes.find((cliente) => cliente.id === clienteId)?.nome ?? 'Cliente removido';
-}
-
 function haFiltroAtivo() {
   return tela.busca !== '' || tela.status !== 'todos' || tela.faixa !== 'todas';
 }
@@ -69,10 +69,21 @@ function haFiltroAtivo() {
 /* ---------- Resumo ---------- */
 
 function renderizarTotais(hoje) {
-  const totais = calcularTotais(clientes, historico, hoje);
+  // Divida e clientes vem do mock; mensagens de hoje sao reais.
+  const totais = calcularTotais(clientes, [], hoje);
   elemento('total-divida').textContent = formatarMoeda(totais.totalCentavos);
   elemento('total-clientes').textContent = String(totais.quantidadeClientes);
-  elemento('total-enviadas').textContent = String(totais.enviadasHoje);
+
+  const enviadasHoje = conversas.filter((c) => {
+    if (c.direcao !== 'saida') return false;
+    const quando = new Date(c.quando);
+    return (
+      quando.getFullYear() === hoje.getFullYear() &&
+      quando.getMonth() === hoje.getMonth() &&
+      quando.getDate() === hoje.getDate()
+    );
+  }).length;
+  elemento('total-enviadas').textContent = String(enviadasHoje);
 }
 
 function renderizarBarras() {
@@ -215,81 +226,47 @@ function atualizarCabecalhos() {
 
 /* ---------- Historico ---------- */
 
-function itemDeMensagem(entrada) {
+const ROTULOS_ORIGEM = {
+  cliente: 'recebida',
+  ia: 'resposta automática',
+  humano: 'enviada por atendente',
+  sistema: 'sistema',
+};
+
+function itemDeConversa(conversa) {
   const item = document.createElement('li');
-  if (entrada.resultado === 'falhou') item.classList.add('historico-falhou');
+  if (conversa.origem === 'sistema') item.classList.add('historico-sistema');
 
   const topo = document.createElement('div');
   topo.className = 'historico-topo';
 
   const nome = document.createElement('span');
   nome.className = 'historico-nome';
-  nome.textContent = `${nomeDoCliente(entrada.clienteId)}${
-    entrada.resultado === 'falhou' ? ' — falhou' : ''
+  // Telefone mascarado tambem aqui: o painel nunca estampa o numero inteiro.
+  nome.textContent = `${mascararTelefone(conversa.telefone)} — ${
+    ROTULOS_ORIGEM[conversa.origem] ?? conversa.origem
   }`;
 
   const quando = document.createElement('span');
   quando.className = 'historico-quando';
-  quando.textContent = formatadorDataHora.format(new Date(entrada.quando));
+  quando.textContent = formatadorDataHora.format(new Date(conversa.quando));
 
   topo.append(nome, quando);
 
   const trecho = document.createElement('p');
   trecho.className = 'historico-trecho';
-  trecho.textContent = entrada.trecho;
+  trecho.textContent = conversa.texto;
 
   item.append(topo, trecho);
   return item;
 }
 
-function itemDeSistema(texto, quando) {
-  const item = document.createElement('li');
-  item.className = 'historico-sistema';
-
-  const topo = document.createElement('div');
-  topo.className = 'historico-topo';
-
-  const nome = document.createElement('span');
-  nome.className = 'historico-nome';
-  nome.textContent = texto;
-
-  const momento = document.createElement('span');
-  momento.className = 'historico-quando';
-  momento.textContent = formatadorDataHora.format(new Date(quando));
-
-  topo.append(nome, momento);
-  item.append(topo);
-  return item;
-}
-
 function renderizarHistorico() {
-  const linhas = [
-    ...historico.map((entrada) => ({
-      quando: entrada.quando,
-      criar: () => itemDeMensagem(entrada),
-    })),
-    ...lerEventosPausa(armazenamento).map((evento) => ({
-      quando: evento.quando,
-      criar: () =>
-        itemDeSistema(
-          evento.pausado ? 'Sistema — disparos pausados' : 'Sistema — disparos retomados',
-          evento.quando,
-        ),
-    })),
-    ...lerEventosSilencio(armazenamento).map((evento) => ({
-      quando: evento.quando,
-      criar: () =>
-        itemDeSistema(
-          `${nomeDoCliente(evento.clienteId)} — ${
-            evento.silenciado ? 'não perturbe ativado' : 'não perturbe removido'
-          }`,
-          evento.quando,
-        ),
-    })),
-  ].sort((a, b) => new Date(b.quando) - new Date(a.quando));
-
-  elemento('lista-historico').replaceChildren(...linhas.map((linha) => linha.criar()));
-  elemento('vazio-historico').hidden = linhas.length > 0;
+  const ordenadas = [...conversas].sort(
+    (a, b) => new Date(b.quando) - new Date(a.quando),
+  );
+  elemento('lista-historico').replaceChildren(...ordenadas.map(itemDeConversa));
+  elemento('vazio-historico').hidden = ordenadas.length > 0;
 }
 
 /* ---------- Pausa e nao-perturbe ---------- */
@@ -385,9 +362,21 @@ function ligarEventos() {
     });
   }
 
-  elemento('botao-pausa').addEventListener('click', () => {
-    aplicarPausa(alternarPausa(armazenamento, new Date()));
-    renderizarHistorico();
+  elemento('botao-pausa').addEventListener('click', async () => {
+    const botao = elemento('botao-pausa');
+    botao.disabled = true;
+    try {
+      // A pausa vive no servidor: e ela que o robo consulta antes de
+      // disparar. Trocar so na tela seria mentira.
+      const { pausado } = await definirPausa(!servidor.pausado);
+      servidor.pausado = pausado;
+      aplicarPausa({ pausado });
+      await recarregarDoServidor();
+    } catch (erro) {
+      mostrarErro(`Nao foi possivel alterar a pausa: ${erro.message}`);
+    } finally {
+      botao.disabled = false;
+    }
   });
 
   elemento('fechar-gaveta').addEventListener('click', fecharDetalhe);
@@ -411,7 +400,40 @@ function renderizar() {
   renderizarHistorico();
 }
 
-preencherSeletores();
-ligarEventos();
-aplicarPausa(lerPausa(armazenamento));
-renderizar();
+function mostrarErro(mensagem) {
+  const faixa = elemento('faixa-erro');
+  faixa.textContent = mensagem;
+  faixa.hidden = false;
+}
+
+function limparErro() {
+  elemento('faixa-erro').hidden = true;
+}
+
+async function recarregarDoServidor() {
+  const [estado, lista] = await Promise.all([carregarEstado(), carregarConversas()]);
+  servidor = estado;
+  conversas = lista;
+  aplicarPausa({ pausado: estado.pausado });
+  renderizar();
+}
+
+async function iniciar() {
+  preencherSeletores();
+  ligarEventos();
+  // Ate a carga terminar, a tela mostra pausado — a leitura segura.
+  aplicarPausa({ pausado: true });
+  renderizar();
+
+  try {
+    await recarregarDoServidor();
+    limparErro();
+  } catch (erro) {
+    mostrarErro(
+      `Nao foi possivel carregar os dados do servidor: ${erro.message} ` +
+        'O historico abaixo pode estar vazio ou desatualizado.',
+    );
+  }
+}
+
+iniciar();

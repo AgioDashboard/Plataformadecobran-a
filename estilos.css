@@ -197,6 +197,40 @@ body {
   box-shadow: inset 0 0 0 1px rgba(217, 45, 32, 0.25);
 }
 
+/* Falha de carga precisa ser visivel: um painel que mostra dado velho sem
+   avisar e pior do que um painel vazio. */
+.faixa-erro {
+  margin-top: var(--gap);
+  padding: 14px 20px;
+  border-radius: var(--raio-medio);
+  background: var(--atencao-fundo);
+  color: var(--atencao-texto);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px rgba(154, 91, 0, 0.25);
+}
+
+/* Rotulo permanente enquanto a lista nao vier do Cobmais. */
+.selo-ficticio {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 3px 10px;
+  border-radius: var(--raio-pilula);
+  background: var(--atencao-fundo);
+  color: var(--atencao-texto);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.aviso-ficticio {
+  max-width: 46ch;
+  margin: 6px 0 0;
+  color: var(--texto-medio);
+  font-size: 0.82rem;
+}
+
 /* ---------- Saudacao e numeros grandes ---------- */
 
 .saudacao {

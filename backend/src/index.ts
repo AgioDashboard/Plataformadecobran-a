@@ -2,7 +2,8 @@ import { lerConfig } from './config.ts';
 import type { Ambiente } from './config.ts';
 import { receber, verificarInscricao } from './whatsapp/webhook.ts';
 import { rotearPainel } from './api/painel.ts';
-import { comCors, responderPreflight } from './api/cors.ts';
+import { autorizado, pedirCredencial } from './api/autenticacao.ts';
+import { ehRotaDoPainel, servirPainel } from './painel/servir.ts';
 import { lerPausaGlobal, registrarAuditoria } from './dominio/travas.ts';
 
 export default {
@@ -11,23 +12,29 @@ export default {
     const url = new URL(requisicao.url);
     const config = lerConfig(env);
 
+    // /saude nao expoe nada e serve de sonda de disponibilidade.
     if (url.pathname === '/saude') {
       return Response.json({ ok: true, ambiente: config.ambiente });
     }
 
+    // O webhook autentica pela assinatura da Meta, nao pelo token do painel.
     if (url.pathname === '/webhook') {
       if (requisicao.method === 'GET') return verificarInscricao(url, config);
       if (requisicao.method === 'POST') return receber(requisicao, config, env.DB, ctx);
       return new Response('Metodo nao permitido', { status: 405 });
     }
 
-    if (url.pathname.startsWith('/api/')) {
-      // O navegador manda OPTIONS antes de qualquer chamada com Authorization.
-      if (requisicao.method === 'OPTIONS') {
-        return responderPreflight(requisicao, config);
+    // Daqui para baixo, tudo exige o token do painel. O painel e a API sao
+    // servidos da mesma origem, entao nao ha CORS envolvido.
+    if (url.pathname.startsWith('/api/') || ehRotaDoPainel(url)) {
+      if (!autorizado(requisicao, config)) {
+        return pedirCredencial();
       }
-      const resposta = await rotearPainel(requisicao, url, config, env.DB);
-      return comCors(resposta, requisicao, config);
+
+      if (url.pathname.startsWith('/api/')) {
+        return rotearPainel(requisicao, url, config, env.DB);
+      }
+      return servirPainel(url);
     }
 
     return new Response('Nao encontrado', { status: 404 });

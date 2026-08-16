@@ -1,50 +1,33 @@
-// Fonte de dados da Fase 2. Substitui dados-mock.js quando o painel aponta
-// para o backend.
+// Fonte de dados real da Fase 2.
 //
-// O token NUNCA fica neste arquivo — ele vai para o Pages, que e publico.
-// E pedido ao operador e guardado so na sessao do navegador.
+// O painel e servido pelo proprio Worker, atras de autenticacao basica.
+// As chamadas abaixo sao de mesma origem, e o navegador reenvia a
+// credencial automaticamente — por isso nao ha token neste arquivo, nem
+// prompt, nem armazenamento de segredo no navegador.
 
-const BASE = localStorage.getItem('cobranca:api') ?? '';
-
-function token() {
-  let t = sessionStorage.getItem('cobranca:token');
-  if (!t) {
-    t = window.prompt('Token de acesso ao painel:') ?? '';
-    if (t) sessionStorage.setItem('cobranca:token', t);
-  }
-  return t;
-}
-
-async function buscar(caminho, opcoes = {}) {
-  const resposta = await fetch(`${BASE}${caminho}`, {
-    ...opcoes,
-    headers: {
-      ...(opcoes.headers ?? {}),
-      authorization: `Bearer ${token()}`,
-    },
-  });
+async function chamar(caminho, opcoes = {}) {
+  const resposta = await fetch(caminho, opcoes);
 
   if (resposta.status === 401) {
-    // Token errado nao pode ficar preso na sessao, senao todo recarregamento
-    // repete a falha sem nunca perguntar de novo.
-    sessionStorage.removeItem('cobranca:token');
-    throw new Error('Token invalido');
+    throw new Error('Sessao expirada. Recarregue a pagina para entrar de novo.');
   }
-  if (!resposta.ok) throw new Error(`Falha ao carregar ${caminho}`);
+  if (!resposta.ok) {
+    throw new Error(`Falha ao acessar ${caminho} (HTTP ${resposta.status})`);
+  }
   return resposta.json();
 }
 
 export async function carregarConversas() {
-  const { conversas } = await buscar('/api/conversas');
+  const { conversas } = await chamar('/api/conversas');
   return conversas;
 }
 
 export async function carregarEstado() {
-  return buscar('/api/estado');
+  return chamar('/api/estado');
 }
 
 export async function definirPausa(pausado) {
-  return buscar('/api/pausa', {
+  return chamar('/api/pausa', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ pausado }),
@@ -52,7 +35,7 @@ export async function definirPausa(pausado) {
 }
 
 export async function definirSilencio(telefone, silenciado) {
-  return buscar('/api/silencio', {
+  return chamar('/api/silencio', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ telefone, silenciado }),

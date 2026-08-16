@@ -1,23 +1,14 @@
 import type { Config } from '../config.ts';
 import { definirPausaGlobal, definirSilencio, lerPausaGlobal } from '../dominio/travas.ts';
-import { textosIguaisEmTempoConstante } from '../seguranca/comparar.ts';
 
-// O token do painel merece o mesmo cuidado que a assinatura do webhook.
-function autorizado(requisicao: Request, config: Config): boolean {
-  const cabecalho = requisicao.headers.get('authorization') ?? '';
-  return textosIguaisEmTempoConstante(cabecalho, `Bearer ${config.painelToken}`);
-}
-
+// A autenticacao acontece no roteador, antes de chegar aqui: painel e API
+// compartilham a mesma checagem, entao nao ha um caminho sem trava.
 export async function rotearPainel(
   requisicao: Request,
   url: URL,
   config: Config,
   db: D1Database,
 ): Promise<Response> {
-  if (!autorizado(requisicao, config)) {
-    return new Response('Nao autorizado', { status: 401 });
-  }
-
   if (url.pathname === '/api/estado' && requisicao.method === 'GET') {
     const pausado = await lerPausaGlobal(db);
     const { results: silenciados } = await db

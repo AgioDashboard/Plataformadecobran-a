@@ -34,10 +34,12 @@
           Disparos pausados. Nenhuma mensagem será enviada até você retomar.
         </div>
 
+        <div id="faixa-erro" class="faixa-erro" role="alert" hidden></div>
+
         <section id="secao-resumo" class="saudacao" aria-labelledby="titulo-resumo">
           <div class="saudacao-texto">
             <h1 id="titulo-resumo">Carteira de cobrança</h1>
-            <p class="subtitulo">Fase 1 — dados fictícios, nenhum disparo ativo</p>
+            <p class="subtitulo">Histórico de conversas real — lista de clientes ainda fictícia</p>
           </div>
 
           <div class="numerao">
@@ -83,8 +85,15 @@
           <section id="secao-clientes" class="cartao cartao-largo" aria-labelledby="titulo-clientes">
             <div class="cartao-topo">
               <div>
-                <h2 id="titulo-clientes">Clientes inadimplentes</h2>
+                <h2 id="titulo-clientes">
+                  Clientes inadimplentes
+                  <span class="selo-ficticio">dados fictícios</span>
+                </h2>
                 <p id="contador-resultados" class="contador">—</p>
+                <p class="aviso-ficticio">
+                  Esta lista ainda não vem do Cobmais. Só o histórico de
+                  conversas ao lado é real.
+                </p>
               </div>
 
               <div class="controles">
