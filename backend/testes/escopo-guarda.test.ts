@@ -63,12 +63,19 @@ interface ComandoSql {
 // carrega o nome da funcao que o cerca: liberar o arquivo inteiro deixaria
 // toda consulta futura de repositorio.ts entrar sem escopo e sem ninguem
 // reparar — o oposto do que este teste existe para fazer.
+// Aspas simples e duplas contam junto com a crase. Ate 2026-08-16 o guarda
+// so olhava crase, e nove consultas escritas em aspas simples — quatro delas
+// tocando devedores e dividas — nunca foram varridas. Passavam verdes por
+// nao serem vistas, que e o mesmo defeito que este teste existe para pegar.
+const PADRAO_SQL = /(?:`([^`]*(?:SELECT|INSERT|UPDATE|DELETE)[^`]*)`|'([^'\n]*(?:SELECT|INSERT|UPDATE|DELETE)[^'\n]*)'|"([^"\n]*(?:SELECT|INSERT|UPDATE|DELETE)[^"\n]*)")/gi;
+
 function comandos(texto: string): ComandoSql[] {
-  return [...texto.matchAll(/`([^`]*(?:SELECT|INSERT|UPDATE|DELETE)[^`]*)`/gi)].map((m) => {
+  return [...texto.matchAll(PADRAO_SQL)].map((m) => {
     const antes = texto.slice(0, m.index);
     const declaracoes = [...antes.matchAll(/\bfunction\s+([A-Za-z0-9_$]+)/g)];
     const ultima = declaracoes[declaracoes.length - 1];
-    return { sql: m[1], funcao: ultima ? ultima[1] : '(fora de funcao)' };
+    // Um dos tres grupos casou: crase, aspas simples ou aspas duplas.
+    return { sql: m[1] ?? m[2] ?? m[3], funcao: ultima ? ultima[1] : '(fora de funcao)' };
   });
 }
 
