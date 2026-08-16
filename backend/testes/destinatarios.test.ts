@@ -51,12 +51,12 @@ test('tolerancia nao aproxima numeros diferentes', () => {
 });
 
 test('numero de outro pais nao sofre remocao de digito', () => {
-  // +1 415 992 16396 — o 9 na quinta posicao nao e o nono digito brasileiro.
-  assert.equal(podeEnviarPara('1415992163968', ['141599216396']), false);
+  // +1 415 900 00001 — o 9 na quinta posicao nao e o nono digito brasileiro.
+  assert.equal(podeEnviarPara('1415900000001', ['14159000000']), false);
 });
 
 test('celular de 13 digitos sem 9 na posicao esperada fica intacto', () => {
-  assert.equal(podeEnviarPara('5535892163968', ['553589216396']), false);
+  assert.equal(podeEnviarPara('5535800000001', ['55358000000']), false);
 });
 
 test('formatacao continua sendo ignorada junto com o nono digito', () => {

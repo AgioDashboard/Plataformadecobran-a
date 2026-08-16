@@ -74,7 +74,92 @@ function criarHistoricoDoCliente(entradas) {
   return lista;
 }
 
+const ROTULO_STATUS_TELEFONE = {
+  desconhecido: 'ainda não sabemos',
+  tem_whatsapp: 'tem WhatsApp',
+  sem_whatsapp: 'sem WhatsApp',
+  invalido: 'número inválido',
+};
+
+// Cada abertura da gaveta ganha um numero. A busca de telefones e assincrona
+// e a gaveta pode ser reaberta em outro cliente antes de a resposta chegar;
+// sem este contador, a lista de um cliente cairia na gaveta de outro.
+let aberturaAtual = 0;
+
+function avisoDeTelefones(texto, classe) {
+  const p = document.createElement('p');
+  p.className = classe;
+  p.textContent = texto;
+  return p;
+}
+
+function listaDeTelefones(telefones) {
+  const lista = document.createElement('ul');
+  lista.className = 'telefones';
+
+  for (const t of telefones) {
+    const item = document.createElement('li');
+    // "telefone-item", nao "telefone": a classe .telefone ja e da celula da
+    // tabela e traria white-space:nowrap, que quebraria o motivo em duas
+    // linhas dentro do cartao.
+    item.className = `telefone-item telefone-${t.status}`;
+
+    const numero = document.createElement('span');
+    numero.className = 'telefone-numero';
+    // O painel nunca estampa o numero inteiro, nem aqui.
+    numero.textContent = mascararTelefone(t.numero);
+
+    const selo = document.createElement('span');
+    selo.className = 'selo-status';
+    selo.textContent = ROTULO_STATUS_TELEFONE[t.status] ?? t.status;
+
+    item.append(numero, selo);
+
+    if (t.ultimoMotivo) {
+      const motivo = document.createElement('p');
+      motivo.className = 'telefone-motivo';
+      motivo.textContent = t.ultimoMotivo;
+      item.append(motivo);
+    }
+
+    lista.append(item);
+  }
+
+  return lista;
+}
+
+// A secao nunca some: sumir faria parecer que o devedor nao tem telefone
+// cadastrado, que e uma afirmacao diferente de "nao consegui buscar".
+async function preencherTelefones(caixa, buscarTelefones, minhaAbertura) {
+  let telefones;
+  try {
+    telefones = await buscarTelefones();
+  } catch (erro) {
+    if (minhaAbertura !== aberturaAtual) return;
+    caixa.replaceChildren(
+      avisoDeTelefones(
+        `Não foi possível carregar os telefones: ${erro.message}`,
+        'telefones-aviso telefones-aviso-erro',
+      ),
+    );
+    return;
+  }
+
+  if (minhaAbertura !== aberturaAtual) return;
+
+  if (telefones.length === 0) {
+    caixa.replaceChildren(
+      avisoDeTelefones('Nenhum telefone cadastrado para este devedor.', 'telefones-aviso'),
+    );
+    return;
+  }
+
+  caixa.replaceChildren(listaDeTelefones(telefones));
+}
+
 export function fecharDetalhe() {
+  // Invalida a busca de telefones em voo: gaveta fechada nao recebe resposta.
+  aberturaAtual += 1;
   elemento('gaveta').hidden = true;
   elemento('fundo-gaveta').hidden = true;
   document.removeEventListener('keydown', aoTeclar, true);
@@ -113,7 +198,14 @@ function aoTeclar(evento) {
   }
 }
 
-export function abrirDetalhe({ cliente, historicoDoCliente, silenciado, hoje, aoAlternarSilencio }) {
+export function abrirDetalhe({
+  cliente,
+  historicoDoCliente,
+  silenciado,
+  hoje,
+  aoAlternarSilencio,
+  buscarTelefones,
+}) {
   const conteudo = elemento('gaveta-conteudo');
   const dias = diasEmAtraso(cliente.vencimento, hoje);
   const partes = [];
@@ -145,6 +237,33 @@ export function abrirDetalhe({ cliente, historicoDoCliente, silenciado, hoje, ao
     criarLinha('WhatsApp', mascararTelefone(cliente.telefone)),
   );
   partes.push(lista);
+
+  aberturaAtual += 1;
+  const minhaAbertura = aberturaAtual;
+
+  const tituloTelefones = document.createElement('p');
+  tituloTelefones.className = 'gaveta-secao';
+  tituloTelefones.textContent = 'Telefones deste cliente';
+
+  const caixaTelefones = document.createElement('div');
+  caixaTelefones.className = 'telefones-caixa';
+
+  if (buscarTelefones) {
+    caixaTelefones.append(avisoDeTelefones('Carregando telefones…', 'telefones-aviso'));
+    // Sem await: a gaveta abre na hora e a lista entra quando chegar.
+    preencherTelefones(caixaTelefones, buscarTelefones, minhaAbertura);
+  } else {
+    // Cliente ficticio nao existe no banco. Dizer isso e melhor do que
+    // mostrar "nenhum telefone cadastrado", que seria falso.
+    caixaTelefones.append(
+      avisoDeTelefones(
+        'Disponível quando a carteira real do credor for importada.',
+        'telefones-aviso',
+      ),
+    );
+  }
+
+  partes.push(tituloTelefones, caixaTelefones);
 
   const tituloHistorico = document.createElement('p');
   tituloHistorico.className = 'gaveta-secao';

@@ -14,6 +14,7 @@ import {
   carregarDevedores,
   carregarEstado,
   carregarRegras,
+  carregarTelefones,
   definirPausa,
   definirSilencio,
   salvarRegras,
@@ -360,6 +361,9 @@ function mostrarDetalhe(clienteId) {
     aoAlternarSilencio: mostrandoFicticios()
       ? null
       : () => trocarSilencio(cliente.telefone),
+    // O id do cliente ficticio nao existe no banco: sem busca, a gaveta
+    // explica isso em vez de afirmar que nao ha telefone cadastrado.
+    buscarTelefones: mostrandoFicticios() ? null : () => carregarTelefones(cliente.id),
   });
 }
 

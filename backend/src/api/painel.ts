@@ -11,6 +11,7 @@ import { importarParaCarteira } from '../cobmais/importar.ts';
 import { conversasDoCredor } from '../db/repositorio.ts';
 import { listarDevedores, listarDividas } from '../db/cadastro.ts';
 import { listarCredores, lerCredor, salvarRegras } from '../db/credores.ts';
+import { telefonesDoDevedor } from '../db/telefones.ts';
 
 // A autenticacao acontece no roteador principal. Aqui a preocupacao e
 // outra: nenhum endpoint de carteira responde sem um credor resolvido.
@@ -123,6 +124,16 @@ export async function rotearPainel(
 
   if (url.pathname === '/api/dividas' && metodo === 'GET') {
     return Response.json({ dividas: await listarDividas(db, credorId) });
+  }
+
+  if (url.pathname === '/api/telefones' && metodo === 'GET') {
+    const devedorId = url.searchParams.get('devedor') ?? '';
+    if (devedorId.length === 0) {
+      return new Response('Informe o devedor', { status: 400 });
+    }
+    // telefonesDoDevedor filtra por credor_id tambem: pedir o telefone de
+    // um devedor de outra carteira devolve lista vazia, nao os dados dele.
+    return Response.json({ telefones: await telefonesDoDevedor(db, credorId, devedorId) });
   }
 
   if (url.pathname === '/api/conversas' && metodo === 'GET') {

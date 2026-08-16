@@ -39,6 +39,13 @@ test('mascararTelefone esconde o miolo do numero', () => {
   assert.equal(mascararTelefone('5521912345678'), '(21) 9****-5678');
 });
 
+test('mascararTelefone tambem mascara fixo de 12 digitos', () => {
+  // Numero ficticio. Fixo entra na lista de telefones desde a Fase 4; dizer
+  // "sem telefone" para ele faria a tela negar um cadastro que existe.
+  assert.equal(mascararTelefone('553530000001'), '(35) 3***-0001');
+  assert.equal(mascararTelefone('+55 (35) 3000-0001'), '(35) 3***-0001');
+});
+
 test('mascararTelefone devolve marcador para entrada invalida', () => {
   assert.equal(mascararTelefone(''), 'sem telefone');
   assert.equal(mascararTelefone('123'), 'sem telefone');

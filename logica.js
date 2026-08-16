@@ -37,11 +37,15 @@ export function rotuloAtraso(dias) {
 // e os quatro ultimos; o miolo nunca aparece na tela.
 export function mascararTelefone(telefone) {
   const digitos = String(telefone ?? '').replace(/\D/g, '');
-  if (digitos.length !== 13) return 'sem telefone';
+  // 13 digitos = celular com o nono; 12 = fixo ou celular sem o nono. Desde
+  // a Fase 4 o painel mostra fixo tambem, e recusar 12 digitos estampava
+  // "sem telefone" num numero que esta cadastrado — pior que nao mostrar.
+  if (digitos.length !== 13 && digitos.length !== 12) return 'sem telefone';
   const ddd = digitos.slice(2, 4);
   const primeiro = digitos.slice(4, 5);
   const finais = digitos.slice(-4);
-  return `(${ddd}) ${primeiro}****-${finais}`;
+  const miolo = digitos.length === 13 ? '****' : '***';
+  return `(${ddd}) ${primeiro}${miolo}-${finais}`;
 }
 
 function normalizarTelefone(bruto) {

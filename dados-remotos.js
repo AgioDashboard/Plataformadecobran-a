@@ -49,6 +49,15 @@ export async function carregarDevedores() {
   return devedores;
 }
 
+// Telefones de um devedor so. O servidor filtra pela carteira do credor
+// escolhido — pedir o devedor de outra carteira devolve lista vazia.
+export async function carregarTelefones(devedorId) {
+  const { telefones } = await chamar(
+    `${comCredor('/api/telefones')}&devedor=${encodeURIComponent(devedorId)}`,
+  );
+  return telefones;
+}
+
 export async function carregarRegras() {
   return chamar(comCredor('/api/regras'));
 }
