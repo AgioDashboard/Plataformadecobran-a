@@ -2,7 +2,8 @@ import { lerConfig } from './config.ts';
 import type { Ambiente } from './config.ts';
 import { receber, verificarInscricao } from './whatsapp/webhook.ts';
 import { rotearPainel } from './api/painel.ts';
-import { autorizado, pedirCredencial } from './api/autenticacao.ts';
+import { pedirCredencial } from './api/autenticacao.ts';
+import { abrirSessao } from './api/sessao.ts';
 import { ehRotaDoPainel, servirPainel } from './painel/servir.ts';
 import { lerPausaGlobal, registrarAuditoria } from './dominio/travas.ts';
 
@@ -27,12 +28,15 @@ export default {
     // Daqui para baixo, tudo exige o token do painel. O painel e a API sao
     // servidos da mesma origem, entao nao ha CORS envolvido.
     if (url.pathname.startsWith('/api/') || ehRotaDoPainel(url)) {
-      if (!autorizado(requisicao, config)) {
+      // A sessao substitui o booleano de antes: cada rota de dados deriva
+      // dela de qual carteira pode falar, em vez de confiar na URL.
+      const sessao = abrirSessao(requisicao, config);
+      if (!sessao) {
         return pedirCredencial();
       }
 
       if (url.pathname.startsWith('/api/')) {
-        return rotearPainel(requisicao, url, config, env.DB);
+        return rotearPainel(requisicao, url, sessao, env.DB);
       }
       return servirPainel(url);
     }

@@ -60,11 +60,7 @@ function comandos(texto: string): ComandoSql[] {
   });
 }
 
-// SKIP TEMPORARIO. O teste ja passa para todo o resto do src; o unico
-// ponto que falta e o SELECT de conversas em api/painel.ts, que a Task 5
-// reescreve. Ligar aqui exigiria liberar painel.ts na lista de excecoes —
-// esconder o problema em vez de adia-lo. REMOVER O SKIP NA TASK 5.
-test('nenhuma consulta a tabela de carteira roda sem credor_id', { skip: 'ligar na Task 5' }, () => {
+test('nenhuma consulta a tabela de carteira roda sem credor_id', () => {
   const faltas: string[] = [];
 
   for (const caminho of arquivosTs(raizSrc)) {
