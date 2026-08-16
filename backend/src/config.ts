@@ -12,7 +12,6 @@ export interface Ambiente {
   ANTHROPIC_API_KEY: string;
   PAINEL_TOKEN: string;
   DESTINATARIOS_TESTE: string;
-  ORIGEM_PAINEL: string;
 }
 
 export interface Config {
@@ -27,7 +26,6 @@ export interface Config {
   anthropicApiKey: string;
   painelToken: string;
   destinatariosTeste: string[];
-  origemPainel: string;
 }
 
 const OBRIGATORIAS = [
@@ -61,8 +59,5 @@ export function lerConfig(env: Partial<Ambiente>): Config {
       .split(',')
       .map((n) => n.trim())
       .filter((n) => n.length > 0),
-    // Sem origem configurada, nenhum navegador recebe permissao — o modo de
-    // falha e bloquear, nao liberar geral.
-    origemPainel: env.ORIGEM_PAINEL ?? '',
   };
 }

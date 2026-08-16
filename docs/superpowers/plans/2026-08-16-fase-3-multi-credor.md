@@ -366,9 +366,12 @@ O `credor_id` é redundante em `dividas` — daria para chegar nele pelo `devedo
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { comoCredorId } from '../src/dominio/credor.ts';
 
-const fonte = readFileSync(new URL('../src/db/cadastro.ts', import.meta.url), 'utf8');
+// join, e nao new URL: com @cloudflare/workers-types carregado, o URL
+// global e o da plataforma Workers e o tsc recusa passa-lo a readFileSync.
+const fonte = readFileSync(join(import.meta.dirname, '../src/db/cadastro.ts'), 'utf8');
 
 // Cada string de SQL do modulo precisa carregar o filtro de carteira.
 // Uma consulta sem ele mistura devedores de credores diferentes — o
@@ -613,7 +616,11 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-const raizSrc = new URL('../src/', import.meta.url).pathname;
+// join(import.meta.dirname, ...) e nao new URL(...): o tsconfig carrega
+// @cloudflare/workers-types, entao URL global e a da plataforma Workers, de
+// tipo incompativel com a URL do Node que readFileSync aceita. Os testes
+// rodariam; o tsc e que reclamaria (TS2769).
+const raizSrc = join(import.meta.dirname, '..', 'src');
 
 // Tabelas cujo conteudo pertence a uma carteira. Consulta a qualquer uma
 // delas sem credor_id mistura credores.
@@ -644,7 +651,8 @@ test('nenhuma consulta a tabela de carteira roda sem credor_id', () => {
   const faltas: string[] = [];
 
   for (const caminho of arquivosTs(raizSrc)) {
-    const relativo = caminho.slice(raizSrc.length).replace(/\\/g, '/');
+    // +1 descarta o separador que sobra depois da raiz.
+    const relativo = caminho.slice(raizSrc.length + 1).replace(/\\/g, '/');
     for (const sql of comandos(readFileSync(caminho, 'utf8'))) {
       if (!TABELAS_DE_CARTEIRA.test(sql)) continue;
       if (/credor_id/i.test(sql)) continue;
