@@ -32,6 +32,12 @@ const LIBERADOS = new Map<string, string>([
     'db/telefones.ts:fecharTentativa',
     'o recibo da Meta traz apenas o wamid, que e unico no mundo inteiro e por isso identifica uma tentativa so; exigir credor_id seria exigir do webhook uma informacao que a Meta nao manda, e o efeito seria nunca fechar tentativa nenhuma',
   ],
+  [
+    // O handler scheduled e um metodo do objeto exportado, nao uma
+    // declaracao "function": por isso a chave sai com "(fora de funcao)".
+    'index.ts:(fora de funcao)',
+    'destravar fila e manutencao que atravessa carteiras de proposito: o cron encerra tentativas sem recibo de todas elas de uma vez e nao le nem devolve dado de credor nenhum, so escreve fechada_em e desfecho; exigir escopo obrigaria a varrer credor a credor, com o mesmo efeito e nenhuma protecao a mais',
+  ],
 ]);
 
 // src/painel/arquivos.ts e gerado por scripts/gerar-painel.mjs e carrega o

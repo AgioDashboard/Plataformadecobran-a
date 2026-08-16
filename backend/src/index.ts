@@ -7,6 +7,11 @@ import { abrirSessao } from './api/sessao.ts';
 import { ehRotaDoPainel, servirPainel } from './painel/servir.ts';
 import { lerPausaGlobal, registrarAuditoria } from './dominio/travas.ts';
 
+// Tentativa sem recibo nao pode travar a fila para sempre: silencio da
+// Meta nao e prova de nada. Depois de uma hora, a tentativa e encerrada
+// como 'sem_recibo' e o telefone CONTINUA 'desconhecido' — so a fila anda.
+const MINUTOS_ATE_DESTRAVAR = 60;
+
 export default {
   // ctx nao pode ser desestruturado: waitUntil perde o this e lanca.
   async fetch(requisicao: Request, env: Ambiente, ctx: ExecutionContext): Promise<Response> {
@@ -47,6 +52,26 @@ export default {
   async scheduled(_evento: ScheduledController, env: Ambiente): Promise<void> {
     const config = lerConfig(env);
 
+    const limite = new Date(Date.now() - MINUTOS_ATE_DESTRAVAR * 60_000).toISOString();
+    const paradas = await env.DB.prepare(
+      `UPDATE tentativas_contato SET fechada_em = ?, desfecho = 'sem_recibo'
+       WHERE fechada_em IS NULL AND aberta_em < ?`,
+    )
+      .bind(new Date().toISOString(), limite)
+      .run();
+
+    const destravadas = paradas.meta.changes ?? 0;
+    if (destravadas > 0) {
+      await registrarAuditoria(env.DB, {
+        acao: 'tentativas-destravadas',
+        telefone: null,
+        detalhe: `${destravadas} tentativa(s) sem recibo apos ${MINUTOS_ATE_DESTRAVAR} minutos`,
+      });
+    }
+
+    // O destravamento roda ANTES da checagem de pausa de proposito: limpar
+    // fila travada nao envia nada e precisa acontecer mesmo com a operacao
+    // parada.
     if (await lerPausaGlobal(env.DB)) {
       await registrarAuditoria(env.DB, {
         acao: 'cron-ignorado',
