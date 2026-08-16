@@ -204,7 +204,7 @@ body {
   padding: 14px 20px;
   border-radius: var(--raio-medio);
   background: var(--atencao-fundo);
-  color: var(--atencao-texto);
+  color: var(--atencao);
   font-weight: 600;
   box-shadow: inset 0 0 0 1px rgba(154, 91, 0, 0.25);
 }
@@ -216,7 +216,7 @@ body {
   padding: 3px 10px;
   border-radius: var(--raio-pilula);
   background: var(--atencao-fundo);
-  color: var(--atencao-texto);
+  color: var(--atencao);
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.03em;
@@ -356,7 +356,7 @@ body {
 
 .grade {
   display: grid;
-  grid-template-columns: minmax(0, 2.45fr) minmax(300px, 1fr);
+  grid-template-columns: minmax(0, 2.8fr) minmax(290px, 1fr);
   gap: var(--gap);
   margin-top: 26px;
   align-items: stretch;
@@ -492,7 +492,7 @@ body {
 }
 
 .tabela th {
-  padding: 0 10px 10px;
+  padding: 0 8px 10px;
   border-bottom: 1px solid var(--borda);
   color: var(--texto-fraco);
   font-size: 0.74rem;
@@ -553,7 +553,7 @@ th[aria-sort="descending"] .ordenador {
 }
 
 .tabela td {
-  padding: 13px 10px;
+  padding: 13px 8px;
   border-bottom: 1px solid var(--borda);
   vertical-align: middle;
 }
@@ -572,9 +572,25 @@ th[aria-sort="descending"] .ordenador {
 
 /* Sem largura minima o nome quebra em tres linhas e as alturas de linha
    ficam irregulares. */
+/* O selo de nao perturbe fica ABAIXO do nome, nao ao lado: em linha ele
+   comia 116px da celula e truncava ate nome curto. Espaco vertical e
+   barato aqui; largura nao e — a tabela ja cabia no cartao no limite. */
 .celula-nome {
-  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
   font-weight: 570;
+}
+
+/* O limite vai no span, nao no td: em tabela de layout automatico o
+   max-width da celula e ignorado, e razao social de formatura e longa o
+   bastante para empurrar os botoes de acao para fora da area visivel. */
+.nome-texto {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .numerico {
@@ -630,7 +646,7 @@ th[aria-sort="descending"] .ordenador {
 .linha-silenciada .celula-nome::after {
   content: "não perturbe";
   display: inline-block;
-  margin-left: 9px;
+  flex: none;
   padding: 2px 9px;
   border-radius: var(--raio-pilula);
   background: var(--alerta);
@@ -644,14 +660,14 @@ th[aria-sort="descending"] .ordenador {
 
 .acoes {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   justify-content: flex-end;
   white-space: nowrap;
 }
 
 .botao-linha {
   min-height: 31px;
-  padding: 0 11px;
+  padding: 0 9px;
   border: 1px solid var(--borda-forte);
   border-radius: var(--raio-pilula);
   background: var(--superficie);

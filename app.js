@@ -1,5 +1,5 @@
 // Orquestracao do painel. Toda logica calculavel vive em logica.js,
-// filtros.js, estado-pausa.js e nao-perturbe.js; aqui ha estado de tela e
+// filtros.js e nao-perturbe.js; aqui ha estado de tela e
 // manipulacao de DOM.
 
 // A lista ficticia so aparece quando a carteira do credor esta vazia — e,
@@ -14,18 +14,20 @@ import {
   carregarDevedores,
   carregarEstado,
   definirPausa,
+  definirSilencio,
 } from './dados-remotos.js';
 import {
   formatarMoeda,
   diasEmAtraso,
   rotuloAtraso,
   mascararTelefone,
+  mesmoTelefone,
   calcularTotais,
 } from './logica.js';
 import { filtrar, ordenar, FAIXAS, STATUS } from './filtros.js';
-// Nao-perturbe da lista ficticia continua local. O nao-perturbe real, por
-// telefone, vive no servidor e e consultado antes de qualquer disparo.
-import { lerSilenciados, estaSilenciado, alternarSilencio } from './nao-perturbe.js';
+// Nao-perturbe vem do servidor, por telefone. Nao ha copia local: o painel
+// so pode mostrar silenciado quem o robo tambem enxerga como silenciado.
+import { estaSilenciado, contarSilenciados } from './nao-perturbe.js';
 import { abrirDetalhe, fecharDetalhe, detalheAberto } from './detalhe-cliente.js';
 
 const ROTULOS_STATUS = {
@@ -35,21 +37,6 @@ const ROTULOS_STATUS = {
 };
 
 const elemento = (id) => document.getElementById(id);
-
-// Em modo restrito o proprio acesso a window.localStorage lanca. O dublê
-// devolvido mantem o painel funcional, apenas sem persistencia.
-function obterArmazenamento() {
-  try {
-    const teste = '__cobranca_teste__';
-    window.localStorage.setItem(teste, '1');
-    window.localStorage.removeItem(teste);
-    return window.localStorage;
-  } catch {
-    return { getItem: () => null, setItem: () => {} };
-  }
-}
-
-const armazenamento = obterArmazenamento();
 
 // Dado vindo do servidor. Comeca vazio e pausado: se a carga falhar, a tela
 // mostra "pausado", que e a leitura segura.
@@ -101,7 +88,7 @@ function renderizarTotais(hoje) {
 }
 
 function renderizarBarras() {
-  const silenciados = lerSilenciados(armazenamento);
+  const quantosSilenciados = contarSilenciados(servidor.silenciados);
   const contar = (status) => clientesEmTela.filter((c) => c.status === status).length;
 
   const itens = [
@@ -110,11 +97,11 @@ function renderizarBarras() {
     { classe: 'barra-sem-resposta', rotulo: 'Sem resposta', valor: contar('sem-resposta') },
   ];
 
-  if (silenciados.length > 0) {
+  if (quantosSilenciados > 0) {
     itens.push({
       classe: 'barra-silenciados',
       rotulo: 'Não perturbe',
-      valor: silenciados.length,
+      valor: quantosSilenciados,
     });
   }
 
@@ -146,9 +133,25 @@ function celula(texto, classe) {
   return td;
 }
 
+// O nome vai num span proprio para que so ELE seja truncado. A celula ainda
+// recebe o selo "nao perturbe" por ::after, e cortar a celula inteira
+// esconderia justamente o indicador de que aquela pessoa esta protegida.
+// Razao social de formatura e longa; sem truncar, a tabela cresce e empurra
+// os botoes de acao para fora da area visivel.
+function celulaDeNome(nome) {
+  const td = document.createElement('td');
+  td.className = 'celula-nome';
+  const texto = document.createElement('span');
+  texto.className = 'nome-texto';
+  texto.textContent = nome;
+  texto.title = nome;
+  td.append(texto);
+  return td;
+}
+
 function linhaDeCliente(cliente, hoje) {
   const dias = diasEmAtraso(cliente.vencimento, hoje);
-  const silenciado = estaSilenciado(armazenamento, cliente.id);
+  const silenciado = estaSilenciado(servidor.silenciados, cliente.telefone);
 
   const linha = document.createElement('tr');
   if (silenciado) linha.className = 'linha-silenciada';
@@ -158,7 +161,7 @@ function linhaDeCliente(cliente, hoje) {
   else if (dias === 0) classeAtraso = 'atraso-hoje';
 
   linha.append(
-    celula(cliente.nome, 'celula-nome'),
+    celulaDeNome(cliente.nome),
     celula(mascararTelefone(cliente.telefone), 'telefone'),
     celula(formatarMoeda(cliente.valorCentavos), 'numerico'),
     celula(formatadorData.format(new Date(`${cliente.vencimento}T00:00:00`))),
@@ -193,7 +196,14 @@ function linhaDeCliente(cliente, hoje) {
       ? `Reativar cobrança de ${cliente.nome}`
       : `Marcar ${cliente.nome} como não perturbe`,
   );
-  silenciar.addEventListener('click', () => trocarSilencio(cliente.id));
+  // Cliente ficticio nao vai para a tabela do servidor: gravar telefone
+  // inventado em nao_perturbe sujaria a trava que protege gente de verdade.
+  if (mostrandoFicticios()) {
+    silenciar.disabled = true;
+    silenciar.title = 'Disponível quando a carteira real do credor for importada.';
+  } else {
+    silenciar.addEventListener('click', () => trocarSilencio(cliente.telefone));
+  }
 
   acoes.append(verDetalhe, silenciar);
   tdAcoes.append(acoes);
@@ -308,26 +318,56 @@ function aplicarPausa(estado) {
   elemento('painel').classList.toggle('painel-pausado', estado.pausado);
 }
 
-function trocarSilencio(clienteId) {
-  alternarSilencio(armazenamento, clienteId, new Date());
-  renderizar();
+async function trocarSilencio(telefone) {
+  const alvo = !estaSilenciado(servidor.silenciados, telefone);
 
+  // A tela so muda depois que o servidor confirma. Atualizar antes daria a
+  // impressao de protecao a quem talvez nao esteja protegido — foi
+  // exatamente esse descompasso que fez o nao-perturbe nao funcionar ate
+  // 2026-08-16, quando ele vivia no localStorage.
+  try {
+    await definirSilencio(telefone, alvo);
+    servidor = await carregarEstado();
+    limparErro();
+  } catch (erro) {
+    mostrarErro(
+      `Não foi possível ${alvo ? 'silenciar' : 'reativar'} este número: ${erro.message}. ` +
+        'O estado na tela continua sendo o que o servidor confirmou.',
+    );
+    return;
+  }
+
+  renderizar();
   // A gaveta reflete o novo estado sem fechar.
-  if (detalheAberto()) mostrarDetalhe(clienteId);
+  if (detalheAberto()) mostrarDetalhe(clienteDaGaveta);
 }
+
+// Guardado a parte porque a gaveta devolve o telefone no callback, e
+// reabri-la exige o id do cliente.
+let clienteDaGaveta = null;
 
 function mostrarDetalhe(clienteId) {
   const cliente = clientesEmTela.find((c) => c.id === clienteId);
   if (!cliente) return;
+  clienteDaGaveta = clienteId;
+
+  // O historico da gaveta e o real, filtrado pelo telefone do cliente.
+  // Antes desta correcao a funcao lia uma variavel `historico` que nunca
+  // existiu no modulo: abrir o detalhe lancava ReferenceError e a gaveta
+  // nao abria.
+  const doCliente = conversas
+    .filter((c) => mesmoTelefone(c.telefone, cliente.telefone))
+    .sort((a, b) => new Date(b.quando) - new Date(a.quando));
 
   abrirDetalhe({
     cliente,
-    historicoDoCliente: historico
-      .filter((entrada) => entrada.clienteId === clienteId)
-      .sort((a, b) => new Date(b.quando) - new Date(a.quando)),
-    silenciado: estaSilenciado(armazenamento, clienteId),
+    historicoDoCliente: doCliente,
+    silenciado: estaSilenciado(servidor.silenciados, cliente.telefone),
     hoje: new Date(),
-    aoAlternarSilencio: trocarSilencio,
+    // Ficticio nao vai ao servidor: sem callback, a gaveta nao oferece a acao.
+    aoAlternarSilencio: mostrandoFicticios()
+      ? null
+      : () => trocarSilencio(cliente.telefone),
   });
 }
 
@@ -423,8 +463,14 @@ function ligarEventos() {
 // de ficticio, ou ficticio sem selo, sao os dois piores resultados possiveis
 // nesta tela — por isso a marcacao e recalculada a cada render, e nao
 // definida uma vez na carga.
+// A comparacao de identidade com a lista importada e o que distingue
+// ficticio de real. Vale como guarda em toda acao que sai para o servidor.
+function mostrandoFicticios() {
+  return clientesEmTela === clientes;
+}
+
 function renderizarOrigemDosClientes() {
-  const ehFicticia = clientesEmTela === clientes;
+  const ehFicticia = mostrandoFicticios();
 
   elemento('titulo-clientes').querySelector('.selo-ficticio').hidden = !ehFicticia;
   elemento('secao-clientes').querySelector('.aviso-ficticio').hidden = !ehFicticia;

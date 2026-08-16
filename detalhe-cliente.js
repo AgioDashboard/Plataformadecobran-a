@@ -151,12 +151,17 @@ export function abrirDetalhe({ cliente, historicoDoCliente, silenciado, hoje, ao
   tituloHistorico.textContent = 'Mensagens deste cliente';
   partes.push(tituloHistorico, criarHistoricoDoCliente(historicoDoCliente));
 
-  const acao = document.createElement('button');
-  acao.type = 'button';
-  acao.className = silenciado ? 'gaveta-acao gaveta-acao-ativa' : 'gaveta-acao';
-  acao.textContent = silenciado ? 'Remover não perturbe' : 'Marcar como não perturbe';
-  acao.addEventListener('click', () => aoAlternarSilencio(cliente.id));
-  partes.push(acao);
+  // Sem callback, a acao nao aparece — e o caso do cliente ficticio, que
+  // nao pode entrar na tabela de nao-perturbe do servidor. Mostrar um botao
+  // inerte seria pior: quem clicasse acharia que protegeu alguem.
+  if (aoAlternarSilencio) {
+    const acao = document.createElement('button');
+    acao.type = 'button';
+    acao.className = silenciado ? 'gaveta-acao gaveta-acao-ativa' : 'gaveta-acao';
+    acao.textContent = silenciado ? 'Remover não perturbe' : 'Marcar como não perturbe';
+    acao.addEventListener('click', () => aoAlternarSilencio());
+    partes.push(acao);
+  }
 
   conteudo.replaceChildren(...partes);
 

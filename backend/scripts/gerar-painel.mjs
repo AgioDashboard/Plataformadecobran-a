@@ -20,7 +20,6 @@ const ARQUIVOS = [
   ['app.js', 'text/javascript; charset=utf-8'],
   ['logica.js', 'text/javascript; charset=utf-8'],
   ['filtros.js', 'text/javascript; charset=utf-8'],
-  ['estado-pausa.js', 'text/javascript; charset=utf-8'],
   ['nao-perturbe.js', 'text/javascript; charset=utf-8'],
   ['detalhe-cliente.js', 'text/javascript; charset=utf-8'],
   ['dados-mock.js', 'text/javascript; charset=utf-8'],

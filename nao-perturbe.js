@@ -1,60 +1,20 @@
-// Nao-perturbe por cliente. Trava INDEPENDENTE da pausa global de
-// estado-pausa.js: na Fase 2 o disparo so acontece se as duas estiverem
-// liberadas, e retomar a pausa global nao reativa quem esta silenciado
-// individualmente.
+// Nao-perturbe por TELEFONE, espelhando a tabela nao_perturbe do servidor.
+//
+// Ate 2026-08-16 este modulo gravava em localStorage, chaveado por id de
+// cliente. O painel mostrava "silenciado" e o robo, que consulta o banco,
+// nunca ficava sabendo: a trava existia dos dois lados e eles nao se
+// falavam. Quem operava via a confirmacao na tela e concluia, errado, que
+// aquela pessoa estava protegida.
+//
+// Agora nao ha estado local nenhum. A lista vem do servidor em
+// /api/estado e a escrita vai por /api/silencio. Uma fonte so.
 
-export const CHAVE_SILENCIADOS = 'cobranca:nao-perturbe';
-export const CHAVE_EVENTOS_SILENCIO = 'cobranca:eventos-nao-perturbe';
+import { mesmoTelefone } from './logica.js';
 
-function lerJson(armazenamento, chave, padrao) {
-  try {
-    const bruto = armazenamento.getItem(chave);
-    if (bruto === null) return padrao;
-    const valor = JSON.parse(bruto);
-    return Array.isArray(valor) ? valor : padrao;
-  } catch {
-    return padrao;
-  }
+export function estaSilenciado(silenciados, telefone) {
+  return (silenciados ?? []).some((s) => mesmoTelefone(s, telefone));
 }
 
-function gravarJson(armazenamento, chave, valor) {
-  try {
-    armazenamento.setItem(chave, JSON.stringify(valor));
-  } catch {
-    // Sem persistencia; a interface continua funcionando.
-  }
-}
-
-export function lerSilenciados(armazenamento) {
-  return lerJson(armazenamento, CHAVE_SILENCIADOS, []);
-}
-
-export function estaSilenciado(armazenamento, clienteId) {
-  return lerSilenciados(armazenamento).includes(clienteId);
-}
-
-export function lerEventosSilencio(armazenamento) {
-  return lerJson(armazenamento, CHAVE_EVENTOS_SILENCIO, []);
-}
-
-export function alternarSilencio(armazenamento, clienteId, agora) {
-  const atuais = lerSilenciados(armazenamento);
-  const jaEstava = atuais.includes(clienteId);
-  const novos = jaEstava
-    ? atuais.filter((id) => id !== clienteId)
-    : [...atuais, clienteId];
-
-  gravarJson(armazenamento, CHAVE_SILENCIADOS, novos);
-
-  const quando = agora.toISOString();
-  const eventos = lerEventosSilencio(armazenamento);
-  eventos.unshift({
-    id: `np-${clienteId}-${quando}`,
-    clienteId,
-    quando,
-    silenciado: !jaEstava,
-  });
-  gravarJson(armazenamento, CHAVE_EVENTOS_SILENCIO, eventos);
-
-  return { silenciado: !jaEstava, silenciados: novos };
+export function contarSilenciados(silenciados) {
+  return (silenciados ?? []).length;
 }

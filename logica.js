@@ -44,6 +44,30 @@ export function mascararTelefone(telefone) {
   return `(${ddd}) ${primeiro}****-${finais}`;
 }
 
+export function normalizarTelefone(bruto) {
+  return String(bruto ?? '').replace(/\D/g, '');
+}
+
+// Mesma forma canonica do backend (backend/src/destinatarios.ts): a Meta
+// entrega celular brasileiro ora com o nono digito, ora sem, e 5535900000001
+// e 553500000001 sao a mesma linha. Sem esta tolerancia a tela diria
+// "ativo" para alguem que o servidor tem como silenciado — o erro perigoso,
+// porque leva a operacao a confiar numa protecao que nao esta ali.
+//
+// Se a regra mudar no backend, tem de mudar aqui junto.
+export function formaCanonicaDeTelefone(bruto) {
+  const d = normalizarTelefone(bruto);
+  if (d.length === 13 && d.startsWith('55') && d[4] === '9') {
+    return d.slice(0, 4) + d.slice(5);
+  }
+  return d;
+}
+
+export function mesmoTelefone(a, b) {
+  const canonicoA = formaCanonicaDeTelefone(a);
+  return canonicoA.length > 0 && canonicoA === formaCanonicaDeTelefone(b);
+}
+
 function mesmoDia(dataISO, referencia) {
   const data = new Date(dataISO);
   return (
