@@ -2,6 +2,7 @@ import type { Sessao } from './sessao.ts';
 import { escopoDaConsulta } from './sessao.ts';
 import type { RegrasCredor } from '../dominio/faixas.ts';
 import { validarRegras } from '../dominio/faixas.ts';
+import { gerarOfertas } from '../dominio/ofertas.ts';
 import {
   definirPausaGlobal,
   definirSilencio,
@@ -98,7 +99,41 @@ export async function rotearPainel(
   if (url.pathname === '/api/regras' && metodo === 'GET') {
     const credor = await lerCredor(db, credorId);
     if (!credor) return new Response('Credor nao encontrado', { status: 404 });
-    return Response.json(credor);
+
+    // Valor de exemplo para a previa comecar num caso real da carteira, em
+    // vez de num numero inventado que nao se parece com divida nenhuma.
+    const media = await db
+      .prepare(
+        `SELECT CAST(AVG(valor_centavos) AS INTEGER) AS media FROM dividas
+         WHERE credor_id = ? AND situacao = 'aberta'`,
+      )
+      .bind(credorId)
+      .first<{ media: number | null }>();
+
+    // Carteira vazia cai em R$ 1.000,00 — redondo, facil de conferir de cabeca.
+    return Response.json({ ...credor, exemploCentavos: media?.media ?? 100000 });
+  }
+
+  if (url.pathname === '/api/previa-ofertas' && metodo === 'POST') {
+    // Calcula e NAO grava. Existe para que a previa do painel use exatamente
+    // a mesma funcao que o portal — reimplementar o calculo no navegador
+    // criaria duas fontes de verdade, e a previa mostraria uma coisa
+    // enquanto o portal faria outra.
+    const corpo = (await requisicao.json()) as Record<string, unknown>;
+    const saldo = Number(corpo.saldoCentavos);
+    if (!Number.isFinite(saldo) || saldo <= 0) {
+      return new Response('Informe um valor de exemplo maior que zero', { status: 400 });
+    }
+
+    const regras = regrasDoCorpo(corpo);
+
+    // 200 com ok:false, e nao 400: enquanto a pessoa digita, a configuracao
+    // passa por estados invalidos o tempo todo, e tratar isso como erro de
+    // requisicao encheria o console de falhas que nao sao falhas.
+    const v = validarRegras(regras);
+    if (!v.ok) return Response.json({ ok: false, motivo: v.motivo, ofertas: [] });
+
+    return Response.json({ ok: true, motivo: '', ofertas: gerarOfertas(saldo, regras) });
   }
 
   if (url.pathname === '/api/regras' && metodo === 'POST') {
