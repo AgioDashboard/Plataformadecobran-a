@@ -2,6 +2,7 @@ import { lerConfig } from './config.ts';
 import type { Ambiente } from './config.ts';
 import { receber, verificarInscricao } from './whatsapp/webhook.ts';
 import { rotearPainel } from './api/painel.ts';
+import { comCors, responderPreflight } from './api/cors.ts';
 import { lerPausaGlobal, registrarAuditoria } from './dominio/travas.ts';
 
 export default {
@@ -21,7 +22,12 @@ export default {
     }
 
     if (url.pathname.startsWith('/api/')) {
-      return rotearPainel(requisicao, url, config, env.DB);
+      // O navegador manda OPTIONS antes de qualquer chamada com Authorization.
+      if (requisicao.method === 'OPTIONS') {
+        return responderPreflight(requisicao, config);
+      }
+      const resposta = await rotearPainel(requisicao, url, config, env.DB);
+      return comCors(resposta, requisicao, config);
     }
 
     return new Response('Nao encontrado', { status: 404 });
