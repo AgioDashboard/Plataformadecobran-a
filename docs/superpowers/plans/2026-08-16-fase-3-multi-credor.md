@@ -96,7 +96,7 @@ Registradas aqui porque cada uma fecha uma alternativa que parece razoável à p
 
 **Interfaces:**
 - Consumes: nada.
-- Produces: `type CredorId`, `function comoCredorId(bruto: string): CredorId | null`, `interface RegrasCredor { descontoMaximoPct: number; parcelamentoMaximo: number; comissaoPct: number }`, `function validarRegras(r: RegrasCredor): { ok: true } | { ok: false; motivo: string }`.
+- Produces: `type CredorId`, `function comoCredorId(bruto: string): CredorId | null`, `interface RegrasCredor { descontoMaximoPct: number; parcelamentoMaximo: number; comissaoSobreRecuperadoPct: number }`, `function validarRegras(r: RegrasCredor): { ok: true } | { ok: false; motivo: string }`.
 
 - [ ] **Step 1: Criar o diretório de migrações com o schema atual**
 
@@ -109,6 +109,11 @@ Copie o conteúdo integral de `backend/src/db/esquema.sql` para `backend/migraco
 ```sql
 -- Um credor e uma empresa de formatura que nos entrega uma carteira.
 -- As regras comerciais moram aqui porque variam de contrato para contrato.
+--
+-- A comissao incide sobre o VALOR RECUPERADO, nao sobre o valor da divida:
+-- a assessoria so ganha quando recupera. O nome da coluna carrega isso
+-- porque um dia alguem vai calcular comissao lendo so o schema. Nada
+-- calcula comissao nesta fase — ainda nao existe registro de pagamento.
 CREATE TABLE IF NOT EXISTS credores (
   id TEXT PRIMARY KEY,
   nome TEXT NOT NULL,
@@ -116,14 +121,14 @@ CREATE TABLE IF NOT EXISTS credores (
   ativo INTEGER NOT NULL DEFAULT 1,
   desconto_maximo_pct REAL NOT NULL DEFAULT 0 CHECK (desconto_maximo_pct >= 0 AND desconto_maximo_pct <= 100),
   parcelamento_maximo INTEGER NOT NULL DEFAULT 1 CHECK (parcelamento_maximo >= 1 AND parcelamento_maximo <= 60),
-  comissao_pct REAL NOT NULL DEFAULT 0 CHECK (comissao_pct >= 0 AND comissao_pct <= 100),
+  comissao_sobre_recuperado_pct REAL NOT NULL DEFAULT 0 CHECK (comissao_sobre_recuperado_pct >= 0 AND comissao_sobre_recuperado_pct <= 100),
   criado_em TEXT NOT NULL
 );
 
 -- Credor padrao: destino de tudo que existe hoje. Regras zeradas de
 -- proposito — desconto so passa a existir quando alguem configurar.
 INSERT OR IGNORE INTO credores
-  (id, nome, documento, ativo, desconto_maximo_pct, parcelamento_maximo, comissao_pct, criado_em)
+  (id, nome, documento, ativo, desconto_maximo_pct, parcelamento_maximo, comissao_sobre_recuperado_pct, criado_em)
 VALUES
   ('credor-padrao', 'Carteira inicial', NULL, 1, 0, 1, 0, '2026-08-16T00:00:00.000Z');
 ```
@@ -156,7 +161,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { comoCredorId, validarRegras } from '../src/dominio/credor.ts';
 
-const validas = { descontoMaximoPct: 20, parcelamentoMaximo: 6, comissaoPct: 15 };
+const validas = { descontoMaximoPct: 20, parcelamentoMaximo: 6, comissaoSobreRecuperadoPct: 15 };
 
 test('regras dentro dos limites passam', () => {
   assert.deepEqual(validarRegras(validas), { ok: true });
@@ -183,7 +188,7 @@ test('parcelamento nao inteiro e recusado', () => {
 });
 
 test('comissao acima de 100 por cento e recusada', () => {
-  const r = validarRegras({ ...validas, comissaoPct: 120 });
+  const r = validarRegras({ ...validas, comissaoSobreRecuperadoPct: 120 });
   assert.equal(r.ok, false);
 });
 
@@ -228,7 +233,7 @@ export function comoCredorId(bruto: string): CredorId | null {
 export interface RegrasCredor {
   descontoMaximoPct: number;
   parcelamentoMaximo: number;
-  comissaoPct: number;
+  comissaoSobreRecuperadoPct: number;
 }
 
 export type Validacao = { ok: true } | { ok: false; motivo: string };
@@ -243,7 +248,7 @@ export function validarRegras(r: RegrasCredor): Validacao {
   if (!percentualValido(r.descontoMaximoPct)) {
     return { ok: false, motivo: 'desconto maximo deve ficar entre 0 e 100' };
   }
-  if (!percentualValido(r.comissaoPct)) {
+  if (!percentualValido(r.comissaoSobreRecuperadoPct)) {
     return { ok: false, motivo: 'comissao deve ficar entre 0 e 100' };
   }
   if (
@@ -1029,7 +1034,7 @@ function daLinha(l: Record<string, string | number>): CredorResumo {
     regras: {
       descontoMaximoPct: Number(l.desconto_maximo_pct),
       parcelamentoMaximo: Number(l.parcelamento_maximo),
-      comissaoPct: Number(l.comissao_pct),
+      comissaoSobreRecuperadoPct: Number(l.comissao_sobre_recuperado_pct),
     },
   };
 }
@@ -1040,7 +1045,7 @@ function daLinha(l: Record<string, string | number>): CredorResumo {
 export async function listarCredores(db: D1Database): Promise<CredorResumo[]> {
   const { results } = await db
     .prepare(
-      `SELECT id, nome, ativo, desconto_maximo_pct, parcelamento_maximo, comissao_pct
+      `SELECT id, nome, ativo, desconto_maximo_pct, parcelamento_maximo, comissao_sobre_recuperado_pct
        FROM credores WHERE ativo = 1 ORDER BY nome`,
     )
     .all<Record<string, string | number>>();
@@ -1050,7 +1055,7 @@ export async function listarCredores(db: D1Database): Promise<CredorResumo[]> {
 export async function lerCredor(db: D1Database, credorId: CredorId): Promise<CredorResumo | null> {
   const l = await db
     .prepare(
-      `SELECT id, nome, ativo, desconto_maximo_pct, parcelamento_maximo, comissao_pct
+      `SELECT id, nome, ativo, desconto_maximo_pct, parcelamento_maximo, comissao_sobre_recuperado_pct
        FROM credores WHERE id = ?`,
     )
     .bind(credorId)
@@ -1066,10 +1071,10 @@ export async function salvarRegras(
   await db
     .prepare(
       `UPDATE credores
-       SET desconto_maximo_pct = ?, parcelamento_maximo = ?, comissao_pct = ?
+       SET desconto_maximo_pct = ?, parcelamento_maximo = ?, comissao_sobre_recuperado_pct = ?
        WHERE id = ?`,
     )
-    .bind(r.descontoMaximoPct, r.parcelamentoMaximo, r.comissaoPct, credorId)
+    .bind(r.descontoMaximoPct, r.parcelamentoMaximo, r.comissaoSobreRecuperadoPct, credorId)
     .run();
 }
 ```
@@ -1164,7 +1169,7 @@ export async function rotearPainel(
     const regras = {
       descontoMaximoPct: Number(corpo.descontoMaximoPct),
       parcelamentoMaximo: Number(corpo.parcelamentoMaximo),
-      comissaoPct: Number(corpo.comissaoPct),
+      comissaoSobreRecuperadoPct: Number(corpo.comissaoSobreRecuperadoPct),
     };
     const v = validarRegras(regras);
     if (!v.ok) return new Response(v.motivo, { status: 400 });
@@ -1614,7 +1619,160 @@ git add credores.js index.html estilos.css app.js dados-remotos.js backend/scrip
 
 ---
 
-### Task 8: Migrar o banco remoto e publicar
+### Task 8: Tela de regras comerciais do credor
+
+**Files:**
+- Modify: `index.html`, `estilos.css`, `app.js`, `dados-remotos.js`
+
+**Interfaces:**
+- Consumes: `GET /api/regras?credor=`, `POST /api/regras?credor=` (Task 5).
+- Produces: `salvarRegras(regras)` em `dados-remotos.js`.
+
+Só o operador da assessoria edita. Um credor logado, quando existir login,
+recebe 403 do backend — a regra já está na Task 5 e esta tela não a
+contorna: ela apenas esconde o formulário quando a resposta vier 403.
+
+- [ ] **Step 1: Acrescentar a chamada de escrita**
+
+Em `dados-remotos.js`:
+
+```js
+export async function salvarRegras(regras) {
+  return chamar(comCredor('/api/regras'), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(regras),
+  });
+}
+```
+
+- [ ] **Step 2: Acrescentar o cartão de regras**
+
+Em `index.html`, dentro de `<div class="grade">`, depois da seção de histórico:
+
+```html
+          <section id="secao-regras" class="cartao" aria-labelledby="titulo-regras" hidden>
+            <div class="cartao-topo">
+              <div>
+                <h2 id="titulo-regras">Regras comerciais</h2>
+                <p class="contador">Valem só para o credor selecionado</p>
+              </div>
+            </div>
+
+            <form id="forma-regras" class="forma-regras">
+              <label class="campo-regra">
+                <span>Desconto máximo (%)</span>
+                <input id="regra-desconto" class="entrada" type="number" min="0" max="100" step="0.5" required />
+              </label>
+
+              <label class="campo-regra">
+                <span>Parcelamento máximo</span>
+                <input id="regra-parcelas" class="entrada" type="number" min="1" max="60" step="1" required />
+              </label>
+
+              <label class="campo-regra">
+                <span>Comissão sobre o valor recuperado (%)</span>
+                <input id="regra-comissao" class="entrada" type="number" min="0" max="100" step="0.5" required />
+              </label>
+
+              <div class="acoes-regras">
+                <button type="submit" class="botao-primario">Salvar regras</button>
+                <span id="aviso-regras" class="aviso-regras" role="status"></span>
+              </div>
+            </form>
+
+            <p class="aviso-ficticio">
+              Desconto configurado aqui <strong>não</strong> autoriza a IA a
+              oferecê-lo. O bloqueio continua valendo até uma decisão separada.
+            </p>
+          </section>
+```
+
+A última frase é obrigatória. Sem ela, alguém configura 20% de desconto e
+espera que a IA passe a negociar — e a IA continua barrando toda menção a
+desconto, como foi decidido na Fase 2.
+
+- [ ] **Step 3: Estilo**
+
+Em `estilos.css`:
+
+```css
+.forma-regras { display: grid; gap: 14px; margin-top: 12px; }
+.campo-regra { display: grid; gap: 6px; font-size: 0.85rem; color: var(--texto-medio); font-weight: 600; }
+.acoes-regras { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.aviso-regras { font-size: 0.85rem; font-weight: 600; }
+.aviso-regras[data-estado='erro'] { color: var(--atencao-texto); }
+```
+
+Se `--atencao-texto` ou a classe `.botao-primario` não existirem, abra
+`estilos.css` e use os tokens e a classe de botão que já estão lá.
+
+- [ ] **Step 4: Ligar no `app.js`**
+
+```js
+import { carregarRegras, salvarRegras } from './dados-remotos.js';
+
+async function montarRegras() {
+  const secao = elemento('secao-regras');
+  let credor;
+  try {
+    credor = await carregarRegras();
+  } catch {
+    // 403 = sessao de credor, que nao edita as proprias regras. A secao
+    // simplesmente nao aparece; nao ha erro a mostrar.
+    secao.hidden = true;
+    return;
+  }
+
+  elemento('regra-desconto').value = credor.regras.descontoMaximoPct;
+  elemento('regra-parcelas').value = credor.regras.parcelamentoMaximo;
+  elemento('regra-comissao').value = credor.regras.comissaoSobreRecuperadoPct;
+  secao.hidden = false;
+
+  elemento('forma-regras').addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+    const aviso = elemento('aviso-regras');
+    aviso.textContent = 'Salvando…';
+    aviso.removeAttribute('data-estado');
+
+    try {
+      await salvarRegras({
+        descontoMaximoPct: Number(elemento('regra-desconto').value),
+        parcelamentoMaximo: Number(elemento('regra-parcelas').value),
+        comissaoSobreRecuperadoPct: Number(elemento('regra-comissao').value),
+      });
+      aviso.textContent = 'Regras salvas.';
+    } catch (erro) {
+      aviso.textContent = `Não foi possível salvar: ${erro.message}`;
+      aviso.dataset.estado = 'erro';
+    }
+  });
+}
+```
+
+Chame `montarRegras()` dentro de `iniciar()`, depois de `recarregarDoServidor()`.
+
+- [ ] **Step 5: Verificar na tela**
+
+Com `npm run dev`, credor selecionado:
+
+1. O cartão mostra 0 / 1 / 0 — os valores do credor padrão.
+2. Salvar 20 / 6 / 15 mostra "Regras salvas."
+3. Recarregar a página traz 20 / 6 / 15 de volta.
+4. Digitar 150 no desconto: o navegador barra pelo `max`. Se você contornar
+   o `max` pelo console e enviar, o backend responde 400 e o aviso mostra a
+   mensagem — a validação de verdade está no servidor, não no formulário.
+5. Nenhum erro no console.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add index.html estilos.css app.js dados-remotos.js && git commit -m "Poe a tela de regras comerciais por credor no painel" && git push
+```
+
+---
+
+### Task 9: Migrar o banco remoto e publicar
 
 **Files:** nenhum arquivo novo.
 
@@ -1704,9 +1862,15 @@ Atualize `~/.claude/projects/C--Users-thesc-OneDrive-Documentos-GitHub-Plataform
 |---|---|
 | Cada devedor e cada dívida pertence a um credor | Task 2 |
 | Nenhuma consulta mistura carteiras — inclusive painel e API | Tasks 3, 5, 7 + teste-guarda |
-| Regras por credor: desconto, parcelamento, comissão | Tasks 1, 5 |
+| Regras por credor: desconto, parcelamento, comissão | Tasks 1, 5, 8 |
 | Terreno pronto para login de credor | Task 4 |
-| Migrar o que existe para um credor padrão, sem perder nada | Tasks 1, 3, 8 |
-| Pausa global ligada durante tudo | Global Constraints + Task 8 Step 1 |
+| Migrar o que existe para um credor padrão, sem perder nada | Tasks 1, 3, 9 |
+| Pausa global ligada durante tudo | Global Constraints + Task 9 Step 1 |
+
+**Importação:** por comando (`curl` no endpoint `POST /api/importar`), por
+decisão sua. Não há botão de upload no painel. Cada carteira nova exige um
+comando — quando a área de vendas trouxer credores em ritmo que torne isso
+incômodo, o botão vira uma tarefa de meia hora sobre o endpoint que já
+existe.
 
 **Fora de escopo, de propósito:** login de credor (só a porta fica aberta); cálculo e fechamento de comissão (a regra fica gravada, o cálculo é outra fase); autorizar a IA a oferecer desconto dentro da política — o bloqueio duro da Fase 2 continua valendo.
