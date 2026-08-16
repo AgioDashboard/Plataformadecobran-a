@@ -32,10 +32,10 @@ export function validarRegras(r: RegrasCredor): Validacao {
     return { ok: false, motivo: 'o teto de desconto deve ficar entre 0 e 100' };
   }
   if (!percentualValido(r.comissaoSobreRecuperadoPct)) {
-    return { ok: false, motivo: 'a comissao deve ficar entre 0 e 100' };
+    return { ok: false, motivo: 'a comissão deve ficar entre 0 e 100' };
   }
   if (!Number.isInteger(r.parcelaMinimaCentavos) || r.parcelaMinimaCentavos <= 0) {
-    return { ok: false, motivo: 'a parcela minima deve ser um valor positivo' };
+    return { ok: false, motivo: 'a parcela mínima deve ser um valor positivo' };
   }
 
   const faixas = Array.isArray(r.faixas) ? r.faixas : [];
@@ -50,13 +50,13 @@ export function validarRegras(r: RegrasCredor): Validacao {
   let esperado = 1;
   for (const [i, f] of faixas.entries()) {
     if (!Number.isInteger(f.de) || !Number.isInteger(f.ate)) {
-      return { ok: false, motivo: 'as quantidades de parcelas devem ser numeros inteiros' };
+      return { ok: false, motivo: 'as quantidades de parcelas devem ser números inteiros' };
     }
     if (f.de > f.ate) {
-      return { ok: false, motivo: `na faixa ${i + 1}, o inicio e maior que o fim` };
+      return { ok: false, motivo: `na faixa ${i + 1}, o início é maior que o fim` };
     }
     if (f.ate > PARCELAS_MAXIMO) {
-      return { ok: false, motivo: `o maximo e ${PARCELAS_MAXIMO} parcelas` };
+      return { ok: false, motivo: `o máximo é ${PARCELAS_MAXIMO} parcelas` };
     }
     if (!percentualValido(f.descontoPct)) {
       return { ok: false, motivo: `na faixa ${i + 1}, o desconto deve ficar entre 0 e 100` };
@@ -70,7 +70,7 @@ export function validarRegras(r: RegrasCredor): Validacao {
     if (f.de < esperado) {
       return {
         ok: false,
-        motivo: i === 0 ? 'a primeira faixa precisa comecar em 1' : `a faixa ${i + 1} se sobrepoe a anterior`,
+        motivo: i === 0 ? 'a primeira faixa precisa começar em 1' : `a faixa ${i + 1} se sobrepõe à anterior`,
       };
     }
     if (f.de > esperado) {
@@ -78,8 +78,8 @@ export function validarRegras(r: RegrasCredor): Validacao {
         ok: false,
         motivo:
           i === 0
-            ? 'a primeira faixa precisa comecar em 1'
-            : `faltam faixas entre ${esperado} e ${f.de - 1} parcelas: a sequencia precisa ser continua`,
+            ? 'a primeira faixa precisa começar em 1'
+            : `faltam faixas entre ${esperado} e ${f.de - 1} parcelas: a sequência precisa ser contínua`,
       };
     }
     esperado = f.ate + 1;
