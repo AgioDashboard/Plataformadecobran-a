@@ -1,6 +1,7 @@
 import type { Config } from '../config.ts';
 import type { CredorId } from '../dominio/credor.ts';
 import { verificarAssinatura } from './assinatura.ts';
+import { separarPorNumero } from './roteamento.ts';
 import { extrairRecibos, processarRecibo } from './recibos.ts';
 import { enviarTexto } from './enviar.ts';
 import { avaliarPortao } from '../dominio/portao.ts';
@@ -26,19 +27,6 @@ export function verificarInscricao(url: URL, config: Config): Response {
     return new Response(desafio, { status: 200 });
   }
   return new Response('Falha na verificacao', { status: 403 });
-}
-
-interface EntradaWebhook {
-  entry?: Array<{
-    changes?: Array<{
-      value?: {
-        messages?: Array<{ from: string; id: string; text?: { body: string } }>;
-        // Os recibos de entrega chegam neste array irmao, no mesmo campo
-        // 'messages' ja assinado. Nao ha campo separado a assinar na Meta.
-        statuses?: unknown[];
-      };
-    }>;
-  }>;
 }
 
 export async function receber(
@@ -69,11 +57,29 @@ export async function receber(
     return new Response('Assinatura invalida', { status: 401 });
   }
 
-  let dados: EntradaWebhook;
+  let corpoCru: unknown;
   try {
-    dados = JSON.parse(corpo) as EntradaWebhook;
+    corpoCru = JSON.parse(corpo);
   } catch {
     return new Response('Corpo invalido', { status: 400 });
+  }
+
+  // A inscricao no webhook e da CONTA, nao do numero: sem este filtro
+  // chegam aqui as mensagens de todos os numeros da conta, inclusive os que
+  // ja rodam em outras plataformas com clientes reais. Tudo o que vem
+  // depois so enxerga o que e do nosso numero.
+  const { proprio: dados, alheios } = separarPorNumero(corpoCru, config.whatsapp.numeroId);
+
+  for (const alheio of alheios) {
+    // So a contagem. Guardar telefone ou texto de cliente de outro sistema
+    // seria reter dado alheio sem proposito nenhum.
+    await registrarAuditoria(db, {
+      acao: 'evento-de-outro-numero-ignorado',
+      telefone: null,
+      detalhe: `numero ${alheio.numeroId}: ${alheio.mensagens} mensagem(ns), ${alheio.statuses} recibo(s)`,
+    }).catch(() => {
+      // Sem banco nao ha registro, mas o descarte vale do mesmo jeito.
+    });
   }
 
   // Os recibos chegam no mesmo POST das mensagens. Ficam fora do caminho
