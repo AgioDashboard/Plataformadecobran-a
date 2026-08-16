@@ -1018,7 +1018,7 @@ Esta tarefa e a próxima formam um commit só, porque entre elas o projeto não 
   - `async function listarCredores(db): Promise<Array<{ id; nome; ativo; regras: RegrasCredor }>>`
   - `async function lerCredor(db, credorId: CredorId)`
   - `async function salvarRegras(db, credorId: CredorId, r: RegrasCredor): Promise<void>`
-  - Endpoints: `GET /api/credores`, `GET /api/credores/:id/regras`, `POST /api/credores/:id/regras`, `GET /api/devedores?credor=`, `GET /api/dividas?credor=`, `GET /api/conversas?credor=`.
+  - Endpoints: `GET /api/credores`, `GET /api/regras?credor=`, `POST /api/regras?credor=`, `GET /api/devedores?credor=`, `GET /api/dividas?credor=`, `GET /api/conversas?credor=`.
 
 - [ ] **Step 1: Implementar o repositório de credores**
 
