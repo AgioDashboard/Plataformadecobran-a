@@ -12,33 +12,8 @@ export function comoCredorId(bruto: string): CredorId | null {
   return FORMATO.test(limpo) ? (limpo as CredorId) : null;
 }
 
-export interface RegrasCredor {
-  descontoMaximoPct: number;
-  parcelamentoMaximo: number;
-  comissaoSobreRecuperadoPct: number;
-}
-
-export type Validacao = { ok: true } | { ok: false; motivo: string };
-
-function percentualValido(valor: number): boolean {
-  return Number.isFinite(valor) && valor >= 0 && valor <= 100;
-}
-
-// O CHECK do SQLite ja barra valor fora de faixa, mas errar aqui devolve
-// 400 com explicacao em vez de 500 com erro de banco.
-export function validarRegras(r: RegrasCredor): Validacao {
-  if (!percentualValido(r.descontoMaximoPct)) {
-    return { ok: false, motivo: 'desconto maximo deve ficar entre 0 e 100' };
-  }
-  if (!percentualValido(r.comissaoSobreRecuperadoPct)) {
-    return { ok: false, motivo: 'comissao deve ficar entre 0 e 100' };
-  }
-  if (
-    !Number.isInteger(r.parcelamentoMaximo) ||
-    r.parcelamentoMaximo < 1 ||
-    r.parcelamentoMaximo > 60
-  ) {
-    return { ok: false, motivo: 'parcelamento maximo deve ser inteiro entre 1 e 60' };
-  }
-  return { ok: true };
-}
+// As regras comerciais mudaram de forma na configuracao de ofertas e
+// mudaram de arquivo junto. Reexportadas aqui para que os importadores
+// existentes continuem funcionando.
+export type { FaixaParcelamento, RegrasCredor, Validacao } from './faixas.ts';
+export { validarRegras, PARCELAS_MAXIMO } from './faixas.ts';

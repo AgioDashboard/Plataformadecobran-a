@@ -1,6 +1,7 @@
 import type { Sessao } from './sessao.ts';
 import { escopoDaConsulta } from './sessao.ts';
-import { validarRegras } from '../dominio/credor.ts';
+import type { RegrasCredor } from '../dominio/faixas.ts';
+import { validarRegras } from '../dominio/faixas.ts';
 import {
   definirPausaGlobal,
   definirSilencio,
@@ -12,6 +13,27 @@ import { conversasDoCredor } from '../db/repositorio.ts';
 import { listarDevedores, listarDividas } from '../db/cadastro.ts';
 import { listarCredores, lerCredor, salvarRegras } from '../db/credores.ts';
 import { telefonesDoDevedor } from '../db/telefones.ts';
+
+// Le as regras do corpo sem julgar nada: quem julga e validarRegras, uma
+// so vez, no dominio. Number() de coisa ausente vira NaN, que a validacao
+// recusa — nao ha por que repetir a checagem aqui.
+function regrasDoCorpo(corpo: Record<string, unknown>): RegrasCredor {
+  return {
+    faixas: Array.isArray(corpo.faixas)
+      ? (corpo.faixas as unknown[]).map((f) => {
+          const bruto = f as Record<string, unknown>;
+          return {
+            de: Number(bruto.de),
+            ate: Number(bruto.ate),
+            descontoPct: Number(bruto.descontoPct),
+          };
+        })
+      : [],
+    parcelaMinimaCentavos: Number(corpo.parcelaMinimaCentavos),
+    descontoTetoPct: Number(corpo.descontoTetoPct),
+    comissaoSobreRecuperadoPct: Number(corpo.comissaoSobreRecuperadoPct),
+  };
+}
 
 // A autenticacao acontece no roteador principal. Aqui a preocupacao e
 // outra: nenhum endpoint de carteira responde sem um credor resolvido.
@@ -86,11 +108,7 @@ export async function rotearPainel(
       return new Response('Somente a assessoria altera regras', { status: 403 });
     }
     const corpo = (await requisicao.json()) as Record<string, unknown>;
-    const regras = {
-      descontoMaximoPct: Number(corpo.descontoMaximoPct),
-      parcelamentoMaximo: Number(corpo.parcelamentoMaximo),
-      comissaoSobreRecuperadoPct: Number(corpo.comissaoSobreRecuperadoPct),
-    };
+    const regras = regrasDoCorpo(corpo);
     const v = validarRegras(regras);
     if (!v.ok) return new Response(v.motivo, { status: 400 });
 
