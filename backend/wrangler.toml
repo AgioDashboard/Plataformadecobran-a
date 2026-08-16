@@ -1,0 +1,26 @@
+name = "cobranca-backend"
+main = "src/index.ts"
+compatibility_date = "2026-08-15"
+
+# O SDK da Anthropic depende de builtins do Node (via undici). Sem esta
+# flag o Worker quebra em producao, nao no deploy.
+compatibility_flags = ["nodejs_compat"]
+
+# Sem observabilidade, uma falha no webhook e invisivel: a Meta reenvia e
+# ninguem fica sabendo.
+[observability]
+enabled = true
+head_sampling_rate = 1
+
+[[d1_databases]]
+binding = "DB"
+database_name = "cobranca"
+database_id = "02b87870-9e17-4c4f-b384-0e6bf335cba2"
+
+# 12:00 UTC = 9h em Brasilia. Dias uteis apenas. A janela de horario e uma
+# trava de conformidade, nao um detalhe de agendamento.
+[triggers]
+crons = ["0 12 * * 1-5"]
+
+[vars]
+AMBIENTE = "teste"

@@ -12,6 +12,10 @@ segredos.json
 .claude/
 .agents/
 
+# Segredos locais do Wrangler (Fase 2). Mesmo peso que o .env.
+.dev.vars
+.dev.vars.*
+
 # Dependencias e build (Fase 2)
 node_modules/
 dist/
