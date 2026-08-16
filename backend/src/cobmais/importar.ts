@@ -99,14 +99,26 @@ export async function importarParaCarteira(
   let atualizados = 0;
 
   for (const cliente of clientes) {
-    // Reimportar a mesma planilha nao pode duplicar devedor. A chave segue
-    // sendo o telefone dentro da carteira, mesmo agora que o CPF pode vir
-    // na planilha: linha sem CPF valido continua existindo, e trocar de
-    // chave deixaria essas linhas sem deduplicacao nenhuma.
-    const existente = await db
-      .prepare('SELECT id FROM devedores WHERE credor_id = ? AND telefone = ?')
-      .bind(credorId, cliente.telefone)
-      .first<{ id: string }>();
+    // Mesmo CPF na mesma carteira e a mesma pessoa. Procurar por documento
+    // ANTES do telefone evita violar o indice unico (credor_id, documento) e,
+    // melhor que isso, trata telefone novo como o que ele e: mais um contato
+    // da mesma pessoa, que a descoberta de WhatsApp da Fase 4 vai testar.
+    const porDocumento = cliente.cpf
+      ? await db
+          .prepare('SELECT id FROM devedores WHERE credor_id = ? AND documento = ?')
+          .bind(credorId, cliente.cpf)
+          .first<{ id: string }>()
+      : null;
+
+    // Linha sem CPF valido continua existindo, e para ela o telefone segue
+    // sendo a unica chave possivel: sem esta busca, reimportar a mesma
+    // planilha duplicaria esses devedores.
+    const existente =
+      porDocumento ??
+      (await db
+        .prepare('SELECT id FROM devedores WHERE credor_id = ? AND telefone = ?')
+        .bind(credorId, cliente.telefone)
+        .first<{ id: string }>());
 
     let devedorId: string;
     if (existente) {

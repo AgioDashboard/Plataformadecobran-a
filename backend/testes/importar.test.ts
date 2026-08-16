@@ -109,3 +109,18 @@ test('csv so com cabecalho nao aproveita nada', () => {
     descartadas: 0,
   });
 });
+
+test('duas linhas com o mesmo CPF descrevem a mesma pessoa', () => {
+  // Mesma pessoa recadastrada com telefone novo. Antes desta mudanca a
+  // segunda linha violava o indice unico de documento e abortava a
+  // importacao no meio, com parte da carteira ja gravada.
+  const csv = [
+    'nome;telefone;valor;vencimento;cpf',
+    'Ana Ficticia;5535900000001;10,00;10/09/2026;52998224725',
+    'Ana Ficticia;5535900000002;20,00;11/09/2026;52998224725',
+  ].join('\n');
+
+  const linhas = interpretarCsv(csv);
+  assert.equal(linhas.length, 2);
+  assert.equal(linhas[0].cpf, linhas[1].cpf);
+});
