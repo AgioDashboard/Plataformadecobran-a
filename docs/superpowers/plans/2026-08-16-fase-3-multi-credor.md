@@ -1258,7 +1258,7 @@ git add backend/src/api backend/src/db/credores.ts backend/src/index.ts backend/
 - Consumes: `interpretarCsv` (atual), `inserirDevedor`, `inserirDivida`, `CredorId`.
 - Produces: `async function importarParaCarteira(db, credorId: CredorId, csv: string): Promise<{ criados: number; atualizados: number; descartados: number }>`.
 
-- [ ] **Step 1: Escrever o teste da contagem (vai falhar)**
+- [x] **Step 1: Escrever o teste da contagem (vai falhar)**
 
 Acrescente ao final de `backend/testes/importar.test.ts`:
 
@@ -1284,7 +1284,7 @@ test('csv so com cabecalho nao aproveita nada', () => {
 });
 ```
 
-- [ ] **Step 2: Rodar e confirmar a falha**
+- [x] **Step 2: Rodar e confirmar a falha**
 
 ```bash
 cd backend && npm run teste
@@ -1292,7 +1292,7 @@ cd backend && npm run teste
 
 Esperado: `resumoDaImportacao is not a function`.
 
-- [ ] **Step 3: Implementar**
+- [x] **Step 3: Implementar**
 
 Acrescente a `backend/src/cobmais/importar.ts`:
 
@@ -1361,7 +1361,7 @@ export async function importarParaCarteira(
 }
 ```
 
-- [ ] **Step 4: Expor a rota de importação**
+- [x] **Step 4: Expor a rota de importação**
 
 Em `backend/src/api/painel.ts`, depois do bloco de `/api/regras`, acrescente:
 
@@ -1386,13 +1386,13 @@ Em `backend/src/api/painel.ts`, depois do bloco de `/api/regras`, acrescente:
 
 Importe `importarParaCarteira` e `registrarAuditoria` no topo do arquivo.
 
-- [ ] **Step 5: Rodar tudo**
+- [x] **Step 5: Rodar tudo**
 
 ```bash
 cd backend && npm run teste && npx tsc --noEmit
 ```
 
-- [ ] **Step 6: Verificar localmente com planilha fictícia**
+- [x] **Step 6: Verificar localmente com planilha fictícia**
 
 Crie o arquivo **fora do repositório**, no diretório temporário, com nomes e telefones fictícios (`5535900000001` em diante — nunca telefone real):
 
@@ -1406,7 +1406,7 @@ curl -s -u :SENHA_DE_TESTE -X POST --data-binary "@$TEMP/carteira-teste.csv" "ht
 
 Esperado: `{"criados":1,"atualizados":0,"descartados":0}`. Rode de novo: `{"criados":0,"atualizados":1,"descartados":0}` — a reimportação não duplica.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add backend/src/cobmais/importar.ts backend/src/api/painel.ts backend/testes/importar.test.ts && git commit -m "Grava a planilha do Cobmais na carteira do credor sem duplicar" && git push

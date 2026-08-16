@@ -1,7 +1,13 @@
 import type { Sessao } from './sessao.ts';
 import { escopoDaConsulta } from './sessao.ts';
 import { validarRegras } from '../dominio/credor.ts';
-import { definirPausaGlobal, definirSilencio, lerPausaGlobal } from '../dominio/travas.ts';
+import {
+  definirPausaGlobal,
+  definirSilencio,
+  lerPausaGlobal,
+  registrarAuditoria,
+} from '../dominio/travas.ts';
+import { importarParaCarteira } from '../cobmais/importar.ts';
 import { conversasDoCredor } from '../db/repositorio.ts';
 import { listarDevedores, listarDividas } from '../db/cadastro.ts';
 import { listarCredores, lerCredor, salvarRegras } from '../db/credores.ts';
@@ -92,6 +98,23 @@ export async function rotearPainel(
 
     await salvarRegras(db, credorId, regras);
     return Response.json({ credorId, regras });
+  }
+
+  if (url.pathname === '/api/importar' && metodo === 'POST') {
+    // Importar mexe na carteira: e trabalho da assessoria, nao do credor.
+    if (sessao.escopo.tipo !== 'operador') {
+      return new Response('Somente a assessoria importa carteira', { status: 403 });
+    }
+    const csv = await requisicao.text();
+    if (csv.trim().length === 0) return new Response('Planilha vazia', { status: 400 });
+
+    const resultado = await importarParaCarteira(db, credorId, csv);
+    await registrarAuditoria(db, {
+      acao: 'carteira-importada',
+      telefone: null,
+      detalhe: `credor ${credorId}: ${resultado.criados} novos, ${resultado.atualizados} ja existentes, ${resultado.descartados} descartados`,
+    });
+    return Response.json(resultado);
   }
 
   if (url.pathname === '/api/devedores' && metodo === 'GET') {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { interpretarCsv } from '../src/cobmais/importar.ts';
+import { interpretarCsv, resumoDaImportacao } from '../src/cobmais/importar.ts';
 
 const CSV = `nome;telefone;valor;vencimento
 Aurora Comercio;5511900000001;1287,90;18/06/2026
@@ -31,4 +31,22 @@ test('descarta valor ilegivel', () => {
 
 test('csv so com cabecalho devolve lista vazia', () => {
   assert.deepEqual(interpretarCsv('nome;telefone;valor;vencimento'), []);
+});
+
+test('resumo conta linha descartada separado das aproveitadas', () => {
+  const csv = [
+    'nome;telefone;valor;vencimento',
+    'Ana Fictícia;5535900000001;1.234,56;10/09/2026',
+    'Linha quebrada;;;',
+    'Bruno Fictício;5535900000002;99,00;11/09/2026',
+  ].join('\n');
+
+  assert.deepEqual(resumoDaImportacao(csv), { aproveitadas: 2, descartadas: 1 });
+});
+
+test('csv so com cabecalho nao aproveita nada', () => {
+  assert.deepEqual(resumoDaImportacao('nome;telefone;valor;vencimento'), {
+    aproveitadas: 0,
+    descartadas: 0,
+  });
 });
