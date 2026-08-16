@@ -1,4 +1,5 @@
 import type { Config } from '../config.ts';
+import type { CredorId } from '../dominio/credor.ts';
 import { verificarAssinatura } from './assinatura.ts';
 import { enviarTexto } from './enviar.ts';
 import { avaliarPortao } from '../dominio/portao.ts';
@@ -10,6 +11,7 @@ import {
   registrarAuditoria,
 } from '../dominio/travas.ts';
 import { conversaDe, gravarMensagem, ultimaEntradaDe } from '../db/repositorio.ts';
+import { credorDoTelefone } from '../db/cadastro.ts';
 import { podeEnviarPara } from '../destinatarios.ts';
 import { decidir, validarResposta } from '../ia/responder.ts';
 
@@ -87,8 +89,18 @@ export async function receber(
       continue;
     }
 
+    const credorId = await credorDoTelefone(db, mensagem.from);
+    if (credorId === null) {
+      await registrarAuditoria(db, {
+        acao: 'telefone-sem-carteira-unica',
+        telefone: mensagem.from,
+        detalhe: 'conversa gravada sem credor; resolver no painel do operador',
+      });
+    }
+
     await gravarMensagem(db, {
       telefone: mensagem.from,
+      credorId,
       direcao: 'entrada',
       texto,
       tipo: 'livre',
@@ -100,7 +112,7 @@ export async function receber(
     // webhook se demorarmos — o cliente receberia a mesma resposta duas
     // vezes. Por isso o processamento sai do caminho da resposta.
     ctx.waitUntil(
-      responderCliente(config, db, mensagem.from, texto).catch(async (erro) => {
+      responderCliente(config, db, mensagem.from, texto, credorId).catch(async (erro) => {
         await registrarAuditoria(db, {
           acao: 'erro-ao-responder',
           telefone: mensagem.from,
@@ -120,12 +132,15 @@ async function responderCliente(
   db: D1Database,
   telefone: string,
   texto: string,
+  credorId: CredorId | null,
 ): Promise<void> {
   const [pausa, silenciado, ultimaEntrada, historico] = await Promise.all([
     lerPausaGlobal(db),
     estaSilenciado(db, telefone),
     ultimaEntradaDe(db, telefone),
-    conversaDe(db, telefone),
+    // Sem carteira resolvida nao ha historico a mostrar para a IA: buscar
+    // por telefone misturaria conversas de credores diferentes.
+    credorId ? conversaDe(db, credorId, telefone) : Promise.resolve([]),
   ]);
 
   const portao = avaliarPortao({
@@ -176,6 +191,7 @@ async function responderCliente(
   const envio = await enviarTexto(config, telefone, decisao.resposta);
   await gravarMensagem(db, {
     telefone,
+    credorId,
     direcao: 'saida',
     texto: decisao.resposta,
     tipo: 'livre',
