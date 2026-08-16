@@ -1,10 +1,12 @@
 import { normalizarNumero } from '../destinatarios.ts';
 import type { CredorId } from '../dominio/credor.ts';
 import { inserirDevedor, inserirDivida } from '../db/cadastro.ts';
+import { cadastrarTelefones } from '../db/telefones.ts';
 
 export interface Cliente {
   nome: string;
   telefone: string;
+  telefonesExtras: string[];
   valorCentavos: number;
   vencimento: string;
 }
@@ -18,8 +20,16 @@ export function interpretarCsv(texto: string): Cliente[] {
   const linhas = texto.trim().split(/\r?\n/).slice(1);
 
   return linhas.flatMap((linha) => {
-    const [nome, telefoneBruto, valorBruto, vencimentoBruto] = linha.split(';');
+    const colunas = linha.split(';');
+    const [nome, telefoneBruto, valorBruto, vencimentoBruto] = colunas;
     if (!nome || !telefoneBruto || !valorBruto || !vencimentoBruto) return [];
+
+    // Colunas 5 em diante sao telefones adicionais, ate o teto de 5 no
+    // total. Planilha sem essas colunas continua funcionando.
+    const extras = colunas
+      .slice(4)
+      .map((c) => normalizarNumero(c))
+      .filter((c) => c.length >= 10);
 
     const telefone = normalizarNumero(telefoneBruto);
     if (telefone.length < 12) return [];
@@ -36,6 +46,7 @@ export function interpretarCsv(texto: string): Cliente[] {
       {
         nome: nome.trim(),
         telefone,
+        telefonesExtras: extras,
         valorCentavos: centavos,
         vencimento: `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`,
       },
@@ -86,6 +97,13 @@ export async function importarParaCarteira(
       });
       criados += 1;
     }
+
+    // Reimportar nao duplica: o indice unico (devedor_id, numero) segura, e
+    // o INSERT e OR IGNORE. Telefone novo numa reimportacao entra.
+    await cadastrarTelefones(db, credorId, devedorId, [
+      cliente.telefone,
+      ...cliente.telefonesExtras,
+    ]);
 
     // A referencia identifica a divida dentro da carteira. Mesma
     // referencia na mesma carteira nao entra duas vezes.

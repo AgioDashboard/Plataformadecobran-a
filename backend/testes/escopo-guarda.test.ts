@@ -11,7 +11,7 @@ const raizSrc = join(import.meta.dirname, '..', 'src');
 
 // Tabelas cujo conteudo pertence a uma carteira. Consulta a qualquer uma
 // delas sem credor_id mistura credores.
-const TABELAS_DE_CARTEIRA = /\b(devedores|dividas|conversas)\b/i;
+const TABELAS_DE_CARTEIRA = /\b(devedores|dividas|conversas|telefones|tentativas_contato)\b/i;
 
 // Excecoes conscientes, com o motivo. Qualquer nova excecao exige que
 // alguem escreva aqui por que ela e segura.
@@ -19,6 +19,18 @@ const LIBERADOS = new Map<string, string>([
   [
     'db/repositorio.ts:ultimaEntradaDe',
     'a janela de 24 horas e do numero de telefone, nao da carteira: o mesmo numero nao pode receber texto livre por credor diferente so porque trocou de carteira',
+  ],
+  [
+    'db/telefones.ts:definirStatusTelefone',
+    'quem chama e o processamento do recibo, que chega da Meta com o wamid e nenhuma nocao de carteira; o telefone_id ja veio de fecharTentativa, que resolveu uma linha unica, e a chave primaria nao aceita mais de uma carteira por definicao',
+  ],
+  [
+    'db/telefones.ts:tentativaAberta',
+    'a pergunta e se aquele devedor tem tentativa em aberto, e devedor_id ja pertence a exatamente uma carteira; acrescentar credor_id aqui nao estreitaria o resultado, e omiti-lo so poderia liberar uma tentativa a mais, nunca dados de outro credor',
+  ],
+  [
+    'db/telefones.ts:fecharTentativa',
+    'o recibo da Meta traz apenas o wamid, que e unico no mundo inteiro e por isso identifica uma tentativa so; exigir credor_id seria exigir do webhook uma informacao que a Meta nao manda, e o efeito seria nunca fechar tentativa nenhuma',
   ],
 ]);
 

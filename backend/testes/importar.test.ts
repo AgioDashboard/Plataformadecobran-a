@@ -19,6 +19,23 @@ test('normaliza o telefone', () => {
   assert.equal(linhas[1].telefone, '5511900000002');
 });
 
+test('planilha sem colunas extras nao inventa telefone adicional', () => {
+  assert.deepEqual(interpretarCsv(CSV)[0].telefonesExtras, []);
+});
+
+test('colunas extras viram telefones adicionais', () => {
+  const csv = [
+    'nome;telefone;valor;vencimento;tel2;tel3',
+    'Ana Ficticia;5535900000001;10,00;10/09/2026;553530000002;5535900000003',
+  ].join('\n');
+  assert.deepEqual(interpretarCsv(csv)[0].telefonesExtras, ['553530000002', '5535900000003']);
+});
+
+test('coluna extra vazia nao vira telefone', () => {
+  const csv = ['nome;telefone;valor;vencimento;tel2', 'Ana Ficticia;5535900000001;10,00;10/09/2026;'].join('\n');
+  assert.deepEqual(interpretarCsv(csv)[0].telefonesExtras, []);
+});
+
 test('descarta linha sem telefone em vez de enviar para lugar nenhum', () => {
   const semTelefone = `nome;telefone;valor;vencimento\nX;;10,00;01/01/2026`;
   assert.deepEqual(interpretarCsv(semTelefone), []);
