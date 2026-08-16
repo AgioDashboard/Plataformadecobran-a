@@ -5,6 +5,17 @@
 // credencial automaticamente — por isso nao ha token neste arquivo, nem
 // prompt, nem armazenamento de segredo no navegador.
 
+import { credorSelecionado } from './credores.js';
+
+// Toda rota de carteira exige ?credor=. Sem credor escolhido nem chegamos a
+// pedir: a API responderia 400 e o operador veria um erro de HTTP em vez da
+// instrucao do que fazer.
+function comCredor(caminho) {
+  const credor = credorSelecionado();
+  if (!credor) throw new Error('Escolha um credor para ver a carteira.');
+  return `${caminho}?credor=${encodeURIComponent(credor)}`;
+}
+
 async function chamar(caminho, opcoes = {}) {
   const resposta = await fetch(caminho, opcoes);
 
@@ -17,9 +28,24 @@ async function chamar(caminho, opcoes = {}) {
   return resposta.json();
 }
 
+// A lista de credores nao pertence a nenhuma carteira: e o menu de escolha.
+export async function carregarCredores() {
+  const { credores } = await chamar('/api/credores');
+  return credores;
+}
+
 export async function carregarConversas() {
-  const { conversas } = await chamar('/api/conversas');
+  const { conversas } = await chamar(comCredor('/api/conversas'));
   return conversas;
+}
+
+export async function carregarDevedores() {
+  const { devedores } = await chamar(comCredor('/api/devedores'));
+  return devedores;
+}
+
+export async function carregarRegras() {
+  return chamar(comCredor('/api/regras'));
 }
 
 export async function carregarEstado() {

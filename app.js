@@ -2,10 +2,19 @@
 // filtros.js, estado-pausa.js e nao-perturbe.js; aqui ha estado de tela e
 // manipulacao de DOM.
 
-// A lista de clientes ainda vem do mock: nada grava clientes no servidor
-// ainda. O historico e real, vindo do D1 pelo backend.
+// A lista ficticia so aparece quando a carteira do credor esta vazia — e,
+// nesse caso, com o selo e o aviso de "dados ficticios" bem visiveis. Com
+// devedores reais na carteira, mostra os reais e o selo some. Nunca dado
+// real com selo de ficticio, nem ficticio sem selo.
 import { clientes } from './dados-mock.js';
-import { carregarConversas, carregarEstado, definirPausa } from './dados-remotos.js';
+import { credorSelecionado, definirCredorSelecionado } from './credores.js';
+import {
+  carregarConversas,
+  carregarCredores,
+  carregarDevedores,
+  carregarEstado,
+  definirPausa,
+} from './dados-remotos.js';
 import {
   formatarMoeda,
   diasEmAtraso,
@@ -47,6 +56,12 @@ const armazenamento = obterArmazenamento();
 let conversas = [];
 let servidor = { pausado: true, silenciados: [] };
 
+// Comeca no mock. Vira a carteira real assim que o servidor devolver
+// devedores. A comparacao de identidade com `clientes` e o que decide o
+// selo de dados ficticios — por isso a variavel guarda a propria lista
+// importada, sem copia.
+let clientesEmTela = clientes;
+
 // Estado da tela. Toda interacao altera este objeto e chama renderizar().
 const tela = {
   busca: '',
@@ -69,8 +84,7 @@ function haFiltroAtivo() {
 /* ---------- Resumo ---------- */
 
 function renderizarTotais(hoje) {
-  // Divida e clientes vem do mock; mensagens de hoje sao reais.
-  const totais = calcularTotais(clientes, [], hoje);
+  const totais = calcularTotais(clientesEmTela, [], hoje);
   elemento('total-divida').textContent = formatarMoeda(totais.totalCentavos);
   elemento('total-clientes').textContent = String(totais.quantidadeClientes);
 
@@ -88,7 +102,7 @@ function renderizarTotais(hoje) {
 
 function renderizarBarras() {
   const silenciados = lerSilenciados(armazenamento);
-  const contar = (status) => clientes.filter((c) => c.status === status).length;
+  const contar = (status) => clientesEmTela.filter((c) => c.status === status).length;
 
   const itens = [
     { classe: 'barra-aguardando', rotulo: 'Aguardando', valor: contar('aguardando') },
@@ -188,15 +202,28 @@ function linhaDeCliente(cliente, hoje) {
   return linha;
 }
 
+// O devedor do banco ainda nao tem situacao nem saldo calculados; ate a
+// fase que cuidar disso, entra como 'aguardando' com valor zerado.
+function comoClienteDePainel(devedor) {
+  return {
+    id: devedor.id,
+    nome: devedor.nome,
+    telefone: devedor.telefone,
+    valorCentavos: 0,
+    vencimento: String(devedor.criadoEm ?? '').slice(0, 10),
+    status: 'aguardando',
+  };
+}
+
 function renderizarClientes(hoje) {
-  const filtrados = filtrar(clientes, tela, hoje);
+  const filtrados = filtrar(clientesEmTela, tela, hoje);
   const visiveis = ordenar(filtrados, tela.coluna, tela.direcao, hoje);
 
   elemento('corpo-clientes').replaceChildren(
     ...visiveis.map((cliente) => linhaDeCliente(cliente, hoje)),
   );
 
-  const semClientes = clientes.length === 0;
+  const semClientes = clientesEmTela.length === 0;
   const filtroEscondeuTudo = !semClientes && visiveis.length === 0;
 
   elemento('tabela-clientes').hidden = semClientes || filtroEscondeuTudo;
@@ -205,9 +232,9 @@ function renderizarClientes(hoje) {
 
   // Sem o contador, um filtro ativo esconde gente sem o operador perceber.
   elemento('contador-resultados').textContent =
-    visiveis.length === clientes.length
-      ? `${clientes.length} clientes na carteira`
-      : `Mostrando ${visiveis.length} de ${clientes.length} clientes`;
+    visiveis.length === clientesEmTela.length
+      ? `${clientesEmTela.length} clientes na carteira`
+      : `Mostrando ${visiveis.length} de ${clientesEmTela.length} clientes`;
 
   elemento('limpar-filtros').hidden = !haFiltroAtivo();
   atualizarCabecalhos();
@@ -290,7 +317,7 @@ function trocarSilencio(clienteId) {
 }
 
 function mostrarDetalhe(clienteId) {
-  const cliente = clientes.find((c) => c.id === clienteId);
+  const cliente = clientesEmTela.find((c) => c.id === clienteId);
   if (!cliente) return;
 
   abrirDetalhe({
@@ -373,7 +400,7 @@ function ligarEventos() {
       aplicarPausa({ pausado });
       await recarregarDoServidor();
     } catch (erro) {
-      mostrarErro(`Nao foi possivel alterar a pausa: ${erro.message}`);
+      mostrarErro(`Não foi possível alterar a pausa: ${erro.message}`);
     } finally {
       botao.disabled = false;
     }
@@ -392,11 +419,26 @@ function ligarEventos() {
   }
 }
 
+// O selo e o aviso acompanham a origem da lista, sempre. Dado real com selo
+// de ficticio, ou ficticio sem selo, sao os dois piores resultados possiveis
+// nesta tela — por isso a marcacao e recalculada a cada render, e nao
+// definida uma vez na carga.
+function renderizarOrigemDosClientes() {
+  const ehFicticia = clientesEmTela === clientes;
+
+  elemento('titulo-clientes').querySelector('.selo-ficticio').hidden = !ehFicticia;
+  elemento('secao-clientes').querySelector('.aviso-ficticio').hidden = !ehFicticia;
+  elemento('subtitulo-resumo').textContent = ehFicticia
+    ? 'Histórico de conversas real — lista de clientes ainda fictícia'
+    : 'Histórico de conversas e lista de clientes vindos da carteira do credor';
+}
+
 function renderizar() {
   const hoje = new Date();
   renderizarTotais(hoje);
   renderizarBarras();
   renderizarClientes(hoje);
+  renderizarOrigemDosClientes();
   renderizarHistorico();
 }
 
@@ -410,10 +452,48 @@ function limparErro() {
   elemento('faixa-erro').hidden = true;
 }
 
+// Devolve true quando ha uma carteira escolhida e vale carregar os dados.
+// O painel nao usa novoElemento: o proprio arquivo ja monta <option> com o
+// construtor Option, e manter um jeito so evita duas convencoes na mesma
+// tela.
+async function montarSeletorDeCredores() {
+  const lista = await carregarCredores();
+  const seletor = elemento('seletor-credor');
+  const atual = credorSelecionado();
+
+  seletor.replaceChildren(
+    new Option('Escolha um credor…', ''),
+    ...lista.map((c) => new Option(c.nome, c.id)),
+  );
+  seletor.value = atual;
+  seletor.addEventListener('change', () => definirCredorSelecionado(seletor.value));
+
+  // Uma carteira so: escolher e cerimonia inutil, seleciona sozinho.
+  if (!atual && lista.length === 1) {
+    definirCredorSelecionado(lista[0].id);
+    return false;
+  }
+
+  // Credor que nao esta na lista deixa o <select> sem opcao correspondente;
+  // o valor volta vazio e a tela precisa dizer isso em vez de ficar muda.
+  if (atual && seletor.value !== atual) {
+    throw new Error(`O credor "${atual}" não existe ou não está ativo.`);
+  }
+
+  return Boolean(atual);
+}
+
 async function recarregarDoServidor() {
-  const [estado, lista] = await Promise.all([carregarEstado(), carregarConversas()]);
+  const [estado, lista, devedores] = await Promise.all([
+    carregarEstado(),
+    carregarConversas(),
+    carregarDevedores(),
+  ]);
   servidor = estado;
   conversas = lista;
+  // A lista de clientes agora vem da carteira do credor. Carteira vazia cai
+  // de volta no mock — e o selo de dados ficticios volta junto.
+  clientesEmTela = devedores.length > 0 ? devedores.map(comoClienteDePainel) : clientes;
   aplicarPausa({ pausado: estado.pausado });
   renderizar();
 }
@@ -426,12 +506,16 @@ async function iniciar() {
   renderizar();
 
   try {
+    const temCredor = await montarSeletorDeCredores();
+    elemento('faixa-sem-credor').hidden = temCredor;
+    if (!temCredor) return;
+
     await recarregarDoServidor();
     limparErro();
   } catch (erro) {
     mostrarErro(
-      `Nao foi possivel carregar os dados do servidor: ${erro.message} ` +
-        'O historico abaixo pode estar vazio ou desatualizado.',
+      `Não foi possível carregar os dados do servidor: ${erro.message} ` +
+        'O histórico abaixo pode estar vazio ou desatualizado.',
     );
   }
 }

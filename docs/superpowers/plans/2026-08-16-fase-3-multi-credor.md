@@ -1424,7 +1424,7 @@ git add backend/src/cobmais/importar.ts backend/src/api/painel.ts backend/testes
 - Consumes: `GET /api/credores`, `GET /api/conversas?credor=`, `GET /api/devedores?credor=`, `GET /api/regras?credor=`.
 - Produces: `credorSelecionado()`, `definirCredorSelecionado(id)`, `carregarCredores()`.
 
-- [ ] **Step 1: Criar o módulo de credor selecionado**
+- [x] **Step 1: Criar o módulo de credor selecionado**
 
 `credores.js` na raiz:
 
@@ -1444,7 +1444,7 @@ export function definirCredorSelecionado(id) {
 }
 ```
 
-- [ ] **Step 2: Acrescentar as chamadas com escopo**
+- [x] **Step 2: Acrescentar as chamadas com escopo**
 
 Em `dados-remotos.js`, substitua `carregarConversas` e acrescente as novas:
 
@@ -1477,7 +1477,7 @@ export async function carregarRegras() {
 }
 ```
 
-- [ ] **Step 3: Acrescentar o seletor ao cabeçalho**
+- [x] **Step 3: Acrescentar o seletor ao cabeçalho**
 
 Em `index.html`, dentro de `<header class="topo">`, antes do `<button id="botao-pausa">`:
 
@@ -1505,7 +1505,7 @@ Em `estilos.css`, junto das outras regras de controle:
 .campo-credor .entrada-seletor { width: 100%; }
 ```
 
-- [ ] **Step 4: Ligar no `app.js`**
+- [x] **Step 4: Ligar no `app.js`**
 
 Substitua `recarregarDoServidor` e `iniciar`:
 
@@ -1599,7 +1599,7 @@ E o selo de dados fictícios passa a depender da origem:
   elemento('secao-clientes').querySelector('.aviso-ficticio').hidden = clientesEmTela !== clientes;
 ```
 
-- [ ] **Step 5: Incluir o arquivo novo no bundle do Worker**
+- [x] **Step 5: Incluir o arquivo novo no bundle do Worker**
 
 Em `backend/scripts/gerar-painel.mjs`, acrescente à lista `ARQUIVOS`:
 
@@ -1609,7 +1609,7 @@ Em `backend/scripts/gerar-painel.mjs`, acrescente à lista `ARQUIVOS`:
 
 Sem isso o painel serve um `import` que responde 404 — a tela fica em branco e o erro só aparece no console.
 
-- [ ] **Step 6: Verificar na tela**
+- [x] **Step 6: Verificar na tela**
 
 Suba `npm run dev`, abra `http://127.0.0.1:8787/`, autentique com a senha de teste e confira:
 
@@ -1619,7 +1619,7 @@ Suba `npm run dev`, abra `http://127.0.0.1:8787/`, autentique com a senha de tes
 4. Abrir `/?credor=inexistente` mostra a faixa de erro, não uma tela vazia sem explicação.
 5. Nenhum erro no console.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add credores.js index.html estilos.css app.js dados-remotos.js backend/scripts/gerar-painel.mjs && git commit -m "Poe o seletor de credor no painel e liga a lista de clientes na carteira" && git push

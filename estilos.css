@@ -412,6 +412,18 @@ body {
   align-items: center;
 }
 
+/* O seletor de credor mora no topo, empurrado para a direita para encostar
+   no botao de pausa: a carteira aberta e o freio de mao ficam juntos. */
+.campo-credor {
+  margin-left: auto;
+  margin-right: var(--gap);
+  min-width: 220px;
+}
+
+.campo-credor .entrada-seletor {
+  width: 100%;
+}
+
 .entrada {
   min-height: 40px;
   padding: 0 15px;
@@ -1055,6 +1067,12 @@ th[aria-sort="descending"] .ordenador {
 
   .campo-busca {
     width: 100%;
+  }
+
+  .campo-credor {
+    order: 2;
+    width: 100%;
+    margin: 0;
   }
 }
 

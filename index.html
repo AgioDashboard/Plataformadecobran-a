@@ -18,6 +18,13 @@
             <a href="#secao-historico" class="pilula">Histórico</a>
           </nav>
 
+          <div class="campo-credor">
+            <label for="seletor-credor" class="oculto-visualmente">Credor</label>
+            <select id="seletor-credor" class="entrada entrada-seletor">
+              <option value="">Escolha um credor…</option>
+            </select>
+          </div>
+
           <button id="botao-pausa" type="button" class="botao-pausa" aria-pressed="false">
             <span class="ponto-pausa" aria-hidden="true"></span>
             <span class="rotulo-pausa">Pausar disparos</span>
@@ -36,10 +43,16 @@
 
         <div id="faixa-erro" class="faixa-erro" role="alert" hidden></div>
 
+        <div id="faixa-sem-credor" class="faixa-erro" role="status" hidden>
+          Escolha um credor no topo para ver a carteira.
+        </div>
+
         <section id="secao-resumo" class="saudacao" aria-labelledby="titulo-resumo">
           <div class="saudacao-texto">
             <h1 id="titulo-resumo">Carteira de cobrança</h1>
-            <p class="subtitulo">Histórico de conversas real — lista de clientes ainda fictícia</p>
+            <p id="subtitulo-resumo" class="subtitulo">
+              Histórico de conversas real — lista de clientes ainda fictícia
+            </p>
           </div>
 
           <div class="numerao">

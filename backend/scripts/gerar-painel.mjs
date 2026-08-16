@@ -25,6 +25,7 @@ const ARQUIVOS = [
   ['detalhe-cliente.js', 'text/javascript; charset=utf-8'],
   ['dados-mock.js', 'text/javascript; charset=utf-8'],
   ['dados-remotos.js', 'text/javascript; charset=utf-8'],
+  ['credores.js', 'text/javascript; charset=utf-8'],
 ];
 
 const PADROES_PROIBIDOS = [
