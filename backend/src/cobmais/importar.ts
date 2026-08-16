@@ -124,6 +124,22 @@ export async function importarParaCarteira(
     if (existente) {
       devedorId = existente.id;
       atualizados += 1;
+
+      // Devedor cadastrado antes de a planilha trazer CPF ficou com
+      // documento vazio, casa por telefone e nunca receberia o CPF de volta.
+      // Sem isso ele fica de fora da deduplicacao para sempre e, na Fase 5,
+      // nunca recebe link do portal — que exige CPF para conferir quem abre.
+      //
+      // So chega aqui quando porDocumento veio nulo, entao ninguem mais na
+      // carteira tem esse CPF: o indice unico nao corre risco. O
+      // "documento IS NULL" garante que uma planilha com CPF trocado nao
+      // sobrescreve o que ja estava cadastrado.
+      if (cliente.cpf && !porDocumento) {
+        await db
+          .prepare('UPDATE devedores SET documento = ? WHERE id = ? AND credor_id = ? AND documento IS NULL')
+          .bind(cliente.cpf, devedorId, credorId)
+          .run();
+      }
     } else {
       devedorId = await inserirDevedor(db, credorId, {
         nome: cliente.nome,
