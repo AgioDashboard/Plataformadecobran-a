@@ -1,6 +1,7 @@
 import type { Config } from '../config.ts';
 import type { CredorId } from '../dominio/credor.ts';
 import { verificarAssinatura } from './assinatura.ts';
+import { extrairRecibos, processarRecibo } from './recibos.ts';
 import { enviarTexto } from './enviar.ts';
 import { avaliarPortao } from '../dominio/portao.ts';
 import { dentroDaJanela } from '../dominio/janela.ts';
@@ -32,6 +33,9 @@ interface EntradaWebhook {
     changes?: Array<{
       value?: {
         messages?: Array<{ from: string; id: string; text?: { body: string } }>;
+        // Os recibos de entrega chegam neste array irmao, no mesmo campo
+        // 'messages' ja assinado. Nao ha campo separado a assinar na Meta.
+        statuses?: unknown[];
       };
     }>;
   }>;
@@ -70,6 +74,22 @@ export async function receber(
     dados = JSON.parse(corpo) as EntradaWebhook;
   } catch {
     return new Response('Corpo invalido', { status: 400 });
+  }
+
+  // Os recibos chegam no mesmo POST das mensagens. Ficam fora do caminho
+  // da resposta pelo mesmo motivo: a Meta reenvia o webhook se demorarmos.
+  for (const recibo of extrairRecibos(dados)) {
+    ctx.waitUntil(
+      processarRecibo(db, recibo).catch(async (erro) => {
+        await registrarAuditoria(db, {
+          acao: 'erro-ao-processar-recibo',
+          telefone: recibo.destinatario,
+          detalhe: String(erro).slice(0, 300),
+        }).catch(() => {
+          // Sem banco nao ha o que registrar; nao derrubar o waitUntil.
+        });
+      }),
+    );
   }
 
   const mensagens =
