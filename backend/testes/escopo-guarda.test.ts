@@ -33,9 +33,7 @@ const LIBERADOS = new Map<string, string>([
     'o recibo da Meta traz apenas o wamid, que e unico no mundo inteiro e por isso identifica uma tentativa so; exigir credor_id seria exigir do webhook uma informacao que a Meta nao manda, e o efeito seria nunca fechar tentativa nenhuma',
   ],
   [
-    // O handler scheduled e um metodo do objeto exportado, nao uma
-    // declaracao "function": por isso a chave sai com "(fora de funcao)".
-    'index.ts:(fora de funcao)',
+    'index.ts:scheduled',
     'destravar fila e manutencao que atravessa carteiras de proposito: o cron encerra tentativas sem recibo de todas elas de uma vez e nao le nem devolve dado de credor nenhum, so escreve fechada_em e desfecho; exigir escopo obrigaria a varrer credor a credor, com o mesmo efeito e nenhuma protecao a mais',
   ],
 ]);
@@ -75,14 +73,34 @@ interface ComandoSql {
 // nao serem vistas, que e o mesmo defeito que este teste existe para pegar.
 const PADRAO_SQL = /(?:`([^`]*(?:SELECT|INSERT|UPDATE|DELETE)[^`]*)`|'([^'\n]*(?:SELECT|INSERT|UPDATE|DELETE)[^'\n]*)'|"([^"\n]*(?:SELECT|INSERT|UPDATE|DELETE)[^"\n]*)")/gi;
 
+// Metodo de objeto conta como funcao. Sem isto, `fetch` e `scheduled` do
+// index.ts — que sao metodos do objeto exportado, nao declaracoes
+// "function" — caiam ambos no rotulo "(fora de funcao)", e uma unica
+// excecao com essa chave liberava o ARQUIVO INTEIRO. Verificado plantando
+// um endpoint que despejava nome e telefone de todos os devedores: o
+// guarda passava verde.
+const PADRAO_FUNCAO =
+  /\bfunction\s+([A-Za-z0-9_$]+)|(?:^|[\s,{])(?:async\s+)?([A-Za-z0-9_$]+)\s*\([^()]*\)\s*(?::[^{;=]+)?\{/g;
+
+// Palavras que casam a forma de um metodo mas nao sao um.
+const NAO_SAO_FUNCOES = new Set(['if', 'for', 'while', 'switch', 'catch', 'return', 'typeof']);
+
+function nomeDaFuncaoAntesDe(texto: string, posicao: number): string {
+  const antes = texto.slice(0, posicao);
+  let nome = '(fora de funcao)';
+  for (const d of antes.matchAll(PADRAO_FUNCAO)) {
+    const candidato = d[1] ?? d[2];
+    if (candidato && !NAO_SAO_FUNCOES.has(candidato)) nome = candidato;
+  }
+  return nome;
+}
+
 function comandos(texto: string): ComandoSql[] {
-  return [...texto.matchAll(PADRAO_SQL)].map((m) => {
-    const antes = texto.slice(0, m.index);
-    const declaracoes = [...antes.matchAll(/\bfunction\s+([A-Za-z0-9_$]+)/g)];
-    const ultima = declaracoes[declaracoes.length - 1];
+  return [...texto.matchAll(PADRAO_SQL)].map((m) => ({
     // Um dos tres grupos casou: crase, aspas simples ou aspas duplas.
-    return { sql: m[1] ?? m[2] ?? m[3], funcao: ultima ? ultima[1] : '(fora de funcao)' };
-  });
+    sql: m[1] ?? m[2] ?? m[3],
+    funcao: nomeDaFuncaoAntesDe(texto, m.index),
+  }));
 }
 
 test('nenhuma consulta a tabela de carteira roda sem credor_id', () => {
