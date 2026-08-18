@@ -35,3 +35,32 @@ export function podeEnviarPara(numero: string, autorizados: string[]): boolean {
   if (alvo.length === 0) return false;
   return autorizados.some((a) => formaCanonica(a) === alvo);
 }
+
+// Mascara para a tela. O painel nunca estampa o numero inteiro de ninguem —
+// nem o de teste, que tambem e telefone de gente de verdade. Mostra DDI e
+// DDD (para dar de conferir de qual pais e regiao e) e os quatro ultimos
+// digitos (para distinguir uma linha da outra).
+export function mascarar(bruto: string): string {
+  const d = normalizarNumero(bruto);
+  if (d.length <= 8) return '*'.repeat(d.length);
+  return `+${d.slice(0, 4)}${'*'.repeat(d.length - 8)}${d.slice(-4)}`;
+}
+
+// Numero para o campo "to" da Graph API. A Meta as vezes entrega o "from"
+// do webhook sem o nono digito, mas o cadastro de destinatario verificado
+// do numero de teste guarda o numero COM o nono digito — mandar sem ele
+// falha com "(#131030) Recipient phone number not in allowed list", mesmo
+// sendo a mesma linha. So mexe em celular BR de 12 digitos (sem o 9);
+// qualquer outro formato passa intacto.
+//
+// Nao usar isto para o telefone GRAVADO no banco: telefone salvo tem que
+// continuar exatamente como a Meta entregou, senao a mesma pessoa vira duas
+// linhas diferentes em ultimaEntradaDe e conversaDe, que comparam por
+// igualdade exata.
+export function formaDeEnvio(numero: string): string {
+  const d = normalizarNumero(numero);
+  if (d.length === 12 && d.startsWith('55')) {
+    return `${d.slice(0, 4)}9${d.slice(4)}`;
+  }
+  return d;
+}

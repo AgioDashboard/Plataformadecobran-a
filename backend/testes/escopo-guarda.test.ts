@@ -21,6 +21,14 @@ const LIBERADOS = new Map<string, string>([
     'a janela de 24 horas e do numero de telefone, nao da carteira: o mesmo numero nao pode receber texto livre por credor diferente so porque trocou de carteira',
   ],
   [
+    'db/repositorio.ts:entradasRecentes',
+    'mesma razao de ultimaEntradaDe: a janela de 24 horas e do numero, nao da carteira. A consulta devolve so telefone e o instante da ultima entrada — nunca texto, nome ou valor — e existe para dizer quais numeros da allowlist de teste ainda podem receber texto livre; filtrar por credor_id daria a resposta errada, porque o mesmo numero nao ganha uma janela nova ao trocar de carteira',
+  ],
+  [
+    'db/repositorio.ts:ultimaEntradaComTexto',
+    'o telefone consultado vem sempre de DESTINATARIOS_TESTE, lido do ambiente no servidor, e nunca do corpo da requisicao — o painel manda um indice, nao um numero — e a rota que chama e so do operador; alem disso os numeros de teste nao estao em carteira nenhuma, entao exigir credor_id devolveria vazio e a tela leria isso como "este numero nunca escreveu", que e falso',
+  ],
+  [
     'db/telefones.ts:definirStatusTelefone',
     'quem chama e o processamento do recibo, que chega da Meta com o wamid e nenhuma nocao de carteira; o telefone_id ja veio de fecharTentativa, que resolveu uma linha unica, e a chave primaria nao aceita mais de uma carteira por definicao',
   ],
@@ -31,6 +39,10 @@ const LIBERADOS = new Map<string, string>([
   [
     'db/telefones.ts:fecharTentativa',
     'o recibo da Meta traz apenas o wamid, que e unico no mundo inteiro e por isso identifica uma tentativa so; exigir credor_id seria exigir do webhook uma informacao que a Meta nao manda, e o efeito seria nunca fechar tentativa nenhuma',
+  ],
+  [
+    'whatsapp/recibos.ts:atualizarStatusDaConversa',
+    'o recibo de status da Meta traz apenas o wamid (id_externo), que e unico no mundo inteiro e por isso identifica uma mensagem so, exatamente como fecharTentativa; exigir credor_id exigiria do webhook de status uma informacao que a Meta nao manda junto do recibo',
   ],
   [
     'index.ts:scheduled',

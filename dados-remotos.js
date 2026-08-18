@@ -103,3 +103,31 @@ export async function definirSilencio(telefone, silenciado) {
     body: JSON.stringify({ telefone, silenciado }),
   });
 }
+
+// --- Teste manual de envio -------------------------------------------
+//
+// Nenhuma destas rotas leva telefone: o servidor devolve os numeros da
+// allowlist mascarados e o painel se refere a eles pelo indice. O numero
+// completo nunca chega ao navegador.
+
+export async function carregarDiagnosticoWhatsapp() {
+  return chamar('/api/diagnostico-whatsapp');
+}
+
+// Gera a sugestao da IA e NAO envia. E o passo que da para repetir a
+// vontade sem consumir nada nem incomodar ninguem.
+export async function gerarMensagemDeTeste(indice) {
+  return chamar('/api/teste-mensagem', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ indice }),
+  });
+}
+
+export async function enviarMensagemDeTeste(indice, texto) {
+  return chamar('/api/teste-envio', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ indice, texto }),
+  });
+}

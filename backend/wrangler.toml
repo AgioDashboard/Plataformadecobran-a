@@ -2,8 +2,6 @@ name = "cobranca-backend"
 main = "src/index.ts"
 compatibility_date = "2026-08-15"
 
-# O SDK da Anthropic depende de builtins do Node (via undici). Sem esta
-# flag o Worker quebra em producao, nao no deploy.
 compatibility_flags = ["nodejs_compat"]
 
 # Sem observabilidade, uma falha no webhook e invisivel: a Meta reenvia e
@@ -19,9 +17,12 @@ database_id = "02b87870-9e17-4c4f-b384-0e6bf335cba2"
 migrations_dir = "migracoes"
 
 # 12:00 UTC = 9h em Brasilia. Dias uteis apenas. A janela de horario e uma
-# trava de conformidade, nao um detalhe de agendamento.
+# trava de conformidade, nao um detalhe de agendamento. O segundo cron (a
+# cada minuto) so entrega as respostas da tatica de espera estrategica
+# (webhook.ts::processarRetornosPendentes) — granularidade diferente, sem
+# nenhuma relacao com o disparo em lote.
 [triggers]
-crons = ["0 12 * * 1-5"]
+crons = ["0 12 * * 1-5", "* * * * *"]
 
 [vars]
 AMBIENTE = "teste"

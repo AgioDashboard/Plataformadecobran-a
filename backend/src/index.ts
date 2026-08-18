@@ -1,11 +1,12 @@
 import { lerConfig } from './config.ts';
 import type { Ambiente } from './config.ts';
-import { receber, verificarInscricao } from './whatsapp/webhook.ts';
+import { processarRetornosPendentes, receber, verificarInscricao } from './whatsapp/webhook.ts';
 import { rotearPainel } from './api/painel.ts';
 import { pedirCredencial } from './api/autenticacao.ts';
 import { abrirSessao } from './api/sessao.ts';
 import { ehRotaDoPainel, servirPainel } from './painel/servir.ts';
 import { lerPausaGlobal, registrarAuditoria } from './dominio/travas.ts';
+import { consultarNumeroConfigurado } from './whatsapp/diagnostico.ts';
 
 // Tentativa sem recibo nao pode travar a fila para sempre: silencio da
 // Meta nao e prova de nada. Depois de uma hora, a tentativa e encerrada
@@ -41,7 +42,7 @@ export default {
       }
 
       if (url.pathname.startsWith('/api/')) {
-        return rotearPainel(requisicao, url, sessao, env.DB);
+        return rotearPainel(requisicao, url, sessao, env.DB, config);
       }
       return servirPainel(url);
     }
@@ -49,8 +50,29 @@ export default {
     return new Response('Nao encontrado', { status: 404 });
   },
 
-  async scheduled(_evento: ScheduledController, env: Ambiente): Promise<void> {
+  async scheduled(evento: ScheduledController, env: Ambiente): Promise<void> {
     const config = lerConfig(env);
+
+    // Cron de a cada minuto: so entrega as respostas agendadas pela tatica
+    // de espera estrategica (ia/prompt.ts). Separado do cron diario porque
+    // a granularidade e diferente e nao tem nada a ver com disparo em lote.
+    if (evento.cron === '* * * * *') {
+      await processarRetornosPendentes(config, env.DB);
+      return;
+    }
+
+    // Checagem periodica do token: descobrir que expirou so quando um
+    // envio de verdade falha (bug ja vivido nesta producao) significa
+    // descobrir tarde, sem aviso, no meio de uma conversa real. Aqui a
+    // checagem e barata (um GET) e roda a cada disparo do cron.
+    const numero = await consultarNumeroConfigurado(config);
+    if (!numero.ok) {
+      await registrarAuditoria(env.DB, {
+        acao: 'alerta-token-invalido',
+        telefone: null,
+        detalhe: `token do WhatsApp sem uso: ${numero.erro ?? 'motivo desconhecido'}`,
+      });
+    }
 
     const limite = new Date(Date.now() - MINUTOS_ATE_DESTRAVAR * 60_000).toISOString();
     const paradas = await env.DB.prepare(

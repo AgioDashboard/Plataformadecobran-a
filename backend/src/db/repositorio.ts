@@ -78,3 +78,41 @@ export async function conversasDoCredor(
     .all();
   return results;
 }
+
+// Ultima entrada de cada telefone a partir de um marco. Devolve a lista
+// bruta em vez de aceitar um numero para comparar porque a igualdade entre
+// telefones tem tolerancia (o nono digito) e ela ja vive em destinatarios.ts
+// — reimplementa-la em SQL criaria uma segunda nocao de "mesmo numero".
+export async function entradasRecentes(
+  db: D1Database,
+  desde: string,
+): Promise<Array<{ telefone: string; quando: string }>> {
+  const { results } = await db
+    .prepare(
+      `SELECT telefone, MAX(quando) AS quando FROM conversas
+       WHERE direcao = 'entrada' AND quando >= ?
+       GROUP BY telefone`,
+    )
+    .bind(desde)
+    .all<{ telefone: string; quando: string }>();
+  return results;
+}
+
+// Ultima mensagem de entrada de um telefone, com o texto e sem exigir
+// credor. O teste manual de envio precisa disso: os numeros da allowlist
+// nao estao em carteira nenhuma, e conversaDe (que filtra por credor_id)
+// devolveria vazio para eles — o que se pareceria com "nunca escreveu".
+export async function ultimaEntradaComTexto(
+  db: D1Database,
+  telefone: string,
+): Promise<{ texto: string; quando: string } | null> {
+  const linha = await db
+    .prepare(
+      `SELECT texto, quando FROM conversas
+       WHERE telefone = ? AND direcao = 'entrada'
+       ORDER BY quando DESC LIMIT 1`,
+    )
+    .bind(telefone)
+    .first<{ texto: string; quando: string }>();
+  return linha ?? null;
+}

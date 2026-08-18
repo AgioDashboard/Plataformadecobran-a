@@ -33,6 +33,7 @@ import { filtrar, ordenar, FAIXAS, STATUS } from './filtros.js';
 // so pode mostrar silenciado quem o robo tambem enxerga como silenciado.
 import { estaSilenciado, contarSilenciados } from './nao-perturbe.js';
 import { abrirDetalhe, fecharDetalhe, detalheAberto } from './detalhe-cliente.js';
+import { montarTesteEnvio } from './teste-envio.js';
 
 const ROTULOS_STATUS = {
   aguardando: 'Aguardando',
@@ -783,6 +784,7 @@ async function iniciar() {
 
     await recarregarDoServidor();
     await montarRegras();
+    await montarTesteEnvio();
     limparErro();
   } catch (erro) {
     mostrarErro(

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizarNumero, podeEnviarPara } from '../src/destinatarios.ts';
+import { formaDeEnvio, normalizarNumero, podeEnviarPara } from '../src/destinatarios.ts';
 
 test('normalizarNumero remove formatacao', () => {
   assert.equal(normalizarNumero('+55 (11) 90000-0001'), '5511900000001');
@@ -61,4 +61,22 @@ test('celular de 13 digitos sem 9 na posicao esperada fica intacto', () => {
 
 test('formatacao continua sendo ignorada junto com o nono digito', () => {
   assert.equal(podeEnviarPara('+55 (35) 90000-0001', ['553500000001']), true);
+});
+
+/* ---------- formaDeEnvio ---------- */
+
+test('celular BR de 12 digitos ganha o nono digito de volta para o envio', () => {
+  assert.equal(formaDeEnvio('553592163968'), '5535992163968');
+});
+
+test('numero ja com 13 digitos e nono digito passa intacto', () => {
+  assert.equal(formaDeEnvio('5535992163968'), '5535992163968');
+});
+
+test('numero de outro pais passa intacto', () => {
+  assert.equal(formaDeEnvio('15550100000'), '15550100000');
+});
+
+test('formatacao com espacos e parenteses e ignorada', () => {
+  assert.equal(formaDeEnvio('+55 (35) 9216-3968'), '5535992163968');
 });

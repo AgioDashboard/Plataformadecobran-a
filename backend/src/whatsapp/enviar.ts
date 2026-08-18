@@ -71,3 +71,34 @@ export function enviarTexto(
     text: { preview_url: false, body: texto },
   });
 }
+
+export interface BotaoRapido {
+  id: string;
+  titulo: string;
+}
+
+// Mensagem interativa com botoes de resposta rapida. A Graph API aceita no
+// maximo 3 botoes, titulo de ate 20 caracteres — quem chama garante isso,
+// aqui so se monta o payload.
+export function enviarBotoes(
+  config: Config,
+  para: string,
+  corpo: string,
+  botoes: BotaoRapido[],
+): Promise<ResultadoEnvio> {
+  return chamar(config, {
+    messaging_product: 'whatsapp',
+    to: para,
+    type: 'interactive',
+    interactive: {
+      type: 'button',
+      body: { text: corpo },
+      action: {
+        buttons: botoes.map((b) => ({
+          type: 'reply',
+          reply: { id: b.id, title: b.titulo },
+        })),
+      },
+    },
+  });
+}

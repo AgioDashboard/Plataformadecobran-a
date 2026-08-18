@@ -17,6 +17,15 @@ export interface MensagemBruta {
   from: string;
   id: string;
   text?: { body: string };
+  // Resposta a um botao (dominio/pagamento.ts: "Gerar PIX" / "Gerar
+  // boleto") chega assim, sem "text" nenhum — tratado a parte no webhook,
+  // nunca passa pela IA: e uma acao deterministica, nao uma mensagem para
+  // interpretar.
+  type?: string;
+  interactive?: {
+    type: string;
+    button_reply?: { id: string; title: string };
+  };
 }
 
 export interface ValorDeMudanca {

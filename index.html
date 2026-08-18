@@ -249,6 +249,49 @@
               oferecê-lo. O bloqueio continua valendo até uma decisão separada.
             </p>
           </section>
+
+          <section id="secao-teste" class="cartao" aria-labelledby="titulo-teste" hidden>
+            <div class="cartao-topo">
+              <div>
+                <h2 id="titulo-teste">Teste de envio</h2>
+                <p class="contador">Só para os números autorizados em DESTINATARIOS_TESTE</p>
+              </div>
+              <button id="teste-recarregar" type="button" class="botao-discreto">
+                Atualizar
+              </button>
+            </div>
+
+            <div id="teste-remetente" class="teste-remetente" data-estado="carregando">
+              <p class="teste-remetente-numero">Conferindo o número configurado…</p>
+            </div>
+
+            <h3 class="teste-subtitulo">Destinatário</h3>
+            <ul id="teste-destinatarios" class="teste-destinatarios"></ul>
+            <p id="teste-sem-destinatario" class="vazio" hidden>
+              Nenhum número autorizado em DESTINATARIOS_TESTE.
+            </p>
+
+            <h3 class="teste-subtitulo">Mensagem</h3>
+            <label for="teste-texto" class="oculto-visualmente">Texto da mensagem de teste</label>
+            <textarea
+              id="teste-texto"
+              class="entrada teste-texto"
+              rows="4"
+              placeholder="Gere com a IA ou escreva à mão…"
+            ></textarea>
+
+            <div class="teste-acoes">
+              <button id="teste-gerar" type="button" class="botao-discreto" disabled>
+                Gerar sugestão com a IA
+              </button>
+              <button id="teste-enviar" type="button" class="botao-pausa" disabled>
+                Enviar
+              </button>
+              <span id="teste-aviso-envio" class="aviso-regras" hidden></span>
+            </div>
+
+            <p id="teste-resultado" class="aviso-regras" role="status" hidden></p>
+          </section>
         </div>
       </div>
     </div>

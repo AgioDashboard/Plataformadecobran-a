@@ -7,10 +7,10 @@
     "deploy": "node scripts/gerar-painel.mjs && wrangler deploy",
     "teste": "node --test \"testes/*.test.ts\"",
     "migrar": "wrangler d1 migrations apply cobranca --local",
-    "migrar:remoto": "wrangler d1 migrations apply cobranca --remote"
+    "migrar:remoto": "wrangler d1 migrations apply cobranca --remote",
+    "red-team": "node scripts/red-team.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.117.1",
     "@types/node": "^26.2.0"
   },
   "devDependencies": {
