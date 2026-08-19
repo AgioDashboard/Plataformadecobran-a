@@ -45,6 +45,10 @@ const LIBERADOS = new Map<string, string>([
     'o recibo de status da Meta traz apenas o wamid (id_externo), que e unico no mundo inteiro e por isso identifica uma mensagem so, exatamente como fecharTentativa; exigir credor_id exigiria do webhook de status uma informacao que a Meta nao manda junto do recibo',
   ],
   [
+    'db/reiniciar-teste.ts:reiniciarConversaDeTeste',
+    'o telefone ja foi confirmado contra a allowlist de teste (config.destinatariosTeste) antes de chamar esta funcao, nunca um cliente de verdade; o objetivo e apagar TODO o historico daquele numero para reiniciar o teste do zero, inclusive linhas gravadas sem credor resolvido (credor_id "sem-credor") — filtrar por credor_id deixaria justamente essas sobrarem e o reinicio ficaria incompleto',
+  ],
+  [
     'index.ts:scheduled',
     'destravar fila e manutencao que atravessa carteiras de proposito: o cron encerra tentativas sem recibo de todas elas de uma vez e nao le nem devolve dado de credor nenhum, so escreve fechada_em e desfecho; exigir escopo obrigaria a varrer credor a credor, com o mesmo efeito e nenhuma protecao a mais',
   ],

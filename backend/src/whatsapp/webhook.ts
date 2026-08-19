@@ -15,6 +15,7 @@ import {
 } from '../dominio/travas.ts';
 import { conversaDe, gravarMensagem, ultimaEntradaDe } from '../db/repositorio.ts';
 import { agendarRetorno, marcarRetornoEnviado, retornosDevidos } from '../db/retornos.ts';
+import { reiniciarConversaDeTeste } from '../db/reiniciar-teste.ts';
 import {
   marcarPerguntaRespondida,
   perguntasAbertasDe,
@@ -51,6 +52,13 @@ import type { Decisao } from '../ia/responder.ts';
 // Tatica de espera estrategica (ia/prompt.ts): quanto tempo entre a frase
 // de espera e a resposta de verdade, entregue pelo cron de a cada minuto.
 const ATRASO_ESPERA_ESTRATEGICA_MS = 60_000;
+
+// Comando de teste manual: quem esta testando manda isto pelo proprio
+// WhatsApp para apagar o historico e devolver a(s) divida(s) daquele
+// telefone ao inicio da negociacao, sem abrir o painel. So funciona vindo
+// de um numero da allowlist de teste (config.destinatariosTeste) — nunca
+// deve existir caminho para um cliente de verdade acionar isto.
+const COMANDO_REINICIAR_TESTE = '/reiniciarteste';
 
 // A Meta chama este GET uma vez, ao cadastrar a URL do webhook.
 export function verificarInscricao(url: URL, config: Config): Response {
@@ -164,6 +172,49 @@ export async function receber(
         telefone: mensagem.from,
         detalhe: mensagem.id,
       });
+      continue;
+    }
+
+    if (texto.trim().toLowerCase() === COMANDO_REINICIAR_TESTE) {
+      // Fora da allowlist de teste, o comando e ignorado como qualquer outro
+      // texto: nunca vira uma forma de um cliente de verdade apagar o
+      // proprio historico ou reabrir uma negociacao ja fechada.
+      if (!podeEnviarPara(mensagem.from, config.destinatariosTeste)) {
+        await registrarAuditoria(db, {
+          acao: 'reinicio-teste-negado',
+          telefone: mensagem.from,
+          detalhe: 'numero fora da allowlist de teste',
+        });
+        continue;
+      }
+      ctx.waitUntil(
+        reiniciarConversaDeTeste(db, mensagem.from)
+          .then(async (resultado) => {
+            const confirmacao = `Conversa de teste reiniciada: ${resultado.dividasReiniciadas} divida(s) voltaram ao inicio da negociacao e o historico foi apagado. Pode mandar a primeira mensagem do novo caminho.`;
+            const envio = await enviarTexto(config, formaDeEnvio(mensagem.from), confirmacao);
+            await gravarMensagem(db, {
+              telefone: mensagem.from,
+              credorId: await credorDoTelefone(db, mensagem.from),
+              direcao: 'saida',
+              texto: confirmacao,
+              tipo: 'livre',
+              origem: 'sistema',
+              idExterno: envio.idExterno,
+            });
+            await registrarAuditoria(db, {
+              acao: 'reinicio-teste-executado',
+              telefone: mensagem.from,
+              detalhe: `${resultado.dividasReiniciadas} divida(s)`,
+            });
+          })
+          .catch(async (erro) => {
+            await registrarAuditoria(db, {
+              acao: 'erro-ao-reiniciar-teste',
+              telefone: mensagem.from,
+              detalhe: String(erro).slice(0, 300),
+            }).catch(() => {});
+          }),
+      );
       continue;
     }
 
